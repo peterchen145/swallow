@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "PCPhotoPickerController.h"
 
 @interface AppDelegate ()
 
@@ -16,6 +17,13 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+    _window = [[UIWindow alloc]initWithFrame:[[UIScreen mainScreen] bounds]];
+    _window.backgroundColor = [UIColor whiteColor];
+    [_window makeKeyAndVisible];
+    
+    PCPhotoPickerController *photoPicker = [[PCPhotoPickerController alloc]initWithMaxSelectCount:4];
+    _window.rootViewController = photoPicker;
+    [_window addSubview:photoPicker.view];
     
     return YES;
 }
