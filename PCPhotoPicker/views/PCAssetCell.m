@@ -49,15 +49,15 @@ static const CGFloat kStateButtonWidthAndHeight = 30;
 //    _photoStateButton.selected = asset.selected;
 //    _stateBtnSelected = _photoStateButton.selected;
     _photoView.image = asset.thumbnail;
-    if (asset.selected) {
-        [_photoStateButton setBackgroundImage:[UIImage imageNamed:@"photopicker_state_selected"] forState:UIControlStateNormal ];
-        _stateBtnSelected = YES;
-        
-    }else{
-        _stateBtnSelected = NO;
-        [_photoStateButton setBackgroundImage:[UIImage imageNamed:@"photopicker_state_normal"] forState:UIControlStateNormal];
-        
-    }
+//    if (asset.selected) {
+//        [_photoStateButton setBackgroundImage:[UIImage imageNamed:@"photopicker_state_selected"] forState:UIControlStateNormal ];
+//        _stateBtnSelected = YES;
+//        
+//    }else{
+//        _stateBtnSelected = NO;
+//        [_photoStateButton setBackgroundImage:[UIImage imageNamed:@"photopicker_state_normal"] forState:UIControlStateNormal];
+//        
+//    }
 }
 
 - (void)stateBtnTapped{

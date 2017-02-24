@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		8A03819C1E487B9A00369C34 /* photopicker_state_normal@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A03819B1E487B9A00369C34 /* photopicker_state_normal@2x.png */; };
 		8A03819E1E487BA200369C34 /* photopicker_state_selected@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A03819D1E487BA200369C34 /* photopicker_state_selected@2x.png */; };
-		8A130D1E1E45AE12009CF91C /* PCPhotosViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A130D1D1E45AE12009CF91C /* PCPhotosViewController.m */; };
 		8A130D211E45BE3B009CF91C /* PCAlbumListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A130D201E45BE3B009CF91C /* PCAlbumListViewController.m */; };
 		8A8178541E442DB300DDC53D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178531E442DB300DDC53D /* main.m */; };
 		8A8178571E442DB300DDC53D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178561E442DB300DDC53D /* AppDelegate.m */; };
@@ -20,7 +19,6 @@
 		8A81786D1E442DB400DDC53D /* PCPhotoPickerTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A81786C1E442DB400DDC53D /* PCPhotoPickerTests.m */; };
 		8A8178781E442DB400DDC53D /* PCPhotoPickerUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178771E442DB400DDC53D /* PCPhotoPickerUITests.m */; };
 		8A81788A1E442EA000DDC53D /* PCPhotoPickerController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178891E442EA000DDC53D /* PCPhotoPickerController.m */; };
-		8A81788D1E44354400DDC53D /* PCAlbumListTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A81788C1E44354400DDC53D /* PCAlbumListTableViewController.m */; };
 		8AB125491E457C1000938446 /* PCAssetCell.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB125481E457C1000938446 /* PCAssetCell.m */; };
 		8AB1254C1E45810900938446 /* ScrollBar.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AB1254B1E45810900938446 /* ScrollBar.m */; };
 		8AE3A8FC1E4456A000BBDBDC /* PCPhotoPickerHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 8AE3A8FB1E4456A000BBDBDC /* PCPhotoPickerHelper.m */; };
@@ -49,8 +47,6 @@
 /* Begin PBXFileReference section */
 		8A03819B1E487B9A00369C34 /* photopicker_state_normal@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "photopicker_state_normal@2x.png"; sourceTree = "<group>"; };
 		8A03819D1E487BA200369C34 /* photopicker_state_selected@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "photopicker_state_selected@2x.png"; sourceTree = "<group>"; };
-		8A130D1C1E45AE12009CF91C /* PCPhotosViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCPhotosViewController.h; sourceTree = "<group>"; };
-		8A130D1D1E45AE12009CF91C /* PCPhotosViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCPhotosViewController.m; sourceTree = "<group>"; };
 		8A130D1F1E45BE3B009CF91C /* PCAlbumListViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCAlbumListViewController.h; sourceTree = "<group>"; };
 		8A130D201E45BE3B009CF91C /* PCAlbumListViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCAlbumListViewController.m; sourceTree = "<group>"; };
 		8A81784F1E442DB300DDC53D /* PCPhotoPicker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PCPhotoPicker.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -71,8 +67,6 @@
 		8A8178791E442DB400DDC53D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8A8178881E442EA000DDC53D /* PCPhotoPickerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCPhotoPickerController.h; sourceTree = "<group>"; };
 		8A8178891E442EA000DDC53D /* PCPhotoPickerController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCPhotoPickerController.m; sourceTree = "<group>"; };
-		8A81788B1E44354400DDC53D /* PCAlbumListTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCAlbumListTableViewController.h; sourceTree = "<group>"; };
-		8A81788C1E44354400DDC53D /* PCAlbumListTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCAlbumListTableViewController.m; sourceTree = "<group>"; };
 		8AB125471E457C1000938446 /* PCAssetCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCAssetCell.h; sourceTree = "<group>"; };
 		8AB125481E457C1000938446 /* PCAssetCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCAssetCell.m; sourceTree = "<group>"; };
 		8AB1254A1E45810900938446 /* ScrollBar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ScrollBar.h; sourceTree = "<group>"; };
@@ -220,10 +214,6 @@
 				8A8178891E442EA000DDC53D /* PCPhotoPickerController.m */,
 				8A130D1F1E45BE3B009CF91C /* PCAlbumListViewController.h */,
 				8A130D201E45BE3B009CF91C /* PCAlbumListViewController.m */,
-				8A81788B1E44354400DDC53D /* PCAlbumListTableViewController.h */,
-				8A81788C1E44354400DDC53D /* PCAlbumListTableViewController.m */,
-				8A130D1C1E45AE12009CF91C /* PCPhotosViewController.h */,
-				8A130D1D1E45AE12009CF91C /* PCPhotosViewController.m */,
 			);
 			path = ViewController;
 			sourceTree = "<group>";
@@ -372,10 +362,8 @@
 				8AB1254C1E45810900938446 /* ScrollBar.m in Sources */,
 				8A81785A1E442DB300DDC53D /* ViewController.m in Sources */,
 				8A8178571E442DB300DDC53D /* AppDelegate.m in Sources */,
-				8A81788D1E44354400DDC53D /* PCAlbumListTableViewController.m in Sources */,
 				8AE3A8FC1E4456A000BBDBDC /* PCPhotoPickerHelper.m in Sources */,
 				8AE3A9021E4467DB00BBDBDC /* PCAlbumCell.m in Sources */,
-				8A130D1E1E45AE12009CF91C /* PCPhotosViewController.m in Sources */,
 				8A8178541E442DB300DDC53D /* main.m in Sources */,
 				8A81788A1E442EA000DDC53D /* PCPhotoPickerController.m in Sources */,
 				8AE3A8FF1E4463DE00BBDBDC /* PCAlbumModel.m in Sources */,

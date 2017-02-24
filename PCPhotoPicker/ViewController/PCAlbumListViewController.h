@@ -12,5 +12,5 @@
 @property (strong, nonatomic) NSArray *albums;
 
 @property (strong, nonatomic) NSMutableArray *selectedAssets;
-//@property (strong, nonatomic) NSMutableArray *selectedIndexPathesForAssets;
+@property (strong, nonatomic) NSMutableArray *selectedIndexPathesForAssets;
 @end
