@@ -578,16 +578,19 @@ const NSInteger numberPerLine = 4; //每行的图片cell的个数
         for (NSArray *arr in _selectedIndexPathesForAssets) {
             
            
-            for ( int i = 0; i < (arr.count > 20 ? 20 :arr.count); i++) {
+            for ( int i = 0; i < arr.count ; i++) {
                 NSIndexPath *index = arr[i];
                 PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
                 cell.alpha = 0.2;
-                CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y);
-                UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , cell.frame.size.width, cell.frame.size.height)];
-                imgV.image = cell.photoView.image;
-                imgV.hidden = NO;
-                [_selectedImgViewArr addObject:imgV];
-                [self.view addSubview:imgV];
+                if (i <= 15) { 
+                    CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y);
+                    UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , cell.frame.size.width, cell.frame.size.height)];
+                    imgV.image = cell.photoView.image;
+                    imgV.hidden = NO;
+                    [_selectedImgViewArr addObject:imgV];
+                    [self.view addSubview:imgV];
+                }
+                
             }
         }
     }
@@ -972,9 +975,15 @@ const NSInteger numberPerLine = 4; //每行的图片cell的个数
         PCAlbumModel *model = _albums[index];
         [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
             
-            PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
-            [request removeAssets:assets];
-//            [PHAssetChangeRequest deleteAssets:assets];
+           
+            if (self.tableView.indexPathForSelectedRow.row == 0) {
+                //相机胶卷 相册
+                 [PHAssetChangeRequest deleteAssets:assets];
+            }else{
+                PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
+                [request removeAssets:assets];
+            }
+           
         
         } error:&err];
         

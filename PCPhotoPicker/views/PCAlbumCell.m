@@ -29,7 +29,7 @@
 }
 
 - (void)initGUI{
-    [self initCoverImgView];
+//    [self initCoverImgView];
     [self initTitleLabel];
 }
 
@@ -45,7 +45,7 @@
 
 - (void)initTitleLabel{
     if (!_titleLabel) {
-        _titleLabel = [[UILabel alloc]initWithFrame:CGRectMake(_coverImgView.frame.size.width, 0, self.frame.size.width - _coverImgView.frame.size.width, self.frame.size.height)];
+        _titleLabel = [[UILabel alloc]initWithFrame:CGRectMake(10, 0, self.frame.size.width - 15, self.frame.size.height)];
     }
     [self.contentView addSubview:_titleLabel];
 }
