@@ -96,10 +96,84 @@
 - (NSArray *)assetsFromAlbum:(PHFetchResult *)album{
     NSMutableArray *photoArr = [[NSMutableArray alloc]init];
     for (PHAsset *asset in album) {
+//        NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+//        formatter.dateFormat = @"yyyy-MM-dd";
+//        NSString *date = [formatter stringFromDate:asset.modificationDate];
+//        NSLog(@"date:%@",date);
         PCAssetType type = [self assetTypeWithOriginType:asset.mediaType];
         [photoArr addObject:[PCAssetModel modelWithAsset:asset type:type]];
     }
-    return photoArr;
+    
+    
+//    for (int i = 0; i < album.count; i++) {
+//        NSMutableArray *assetArr = [[NSMutableArray alloc]init];
+//        PHAsset *asset = album[i];
+//        NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+//        formatter.dateFormat = @"yyyy-MM-dd";
+//        NSString *date = [formatter stringFromDate:asset.modificationDate];
+//        PCAssetType type = [self assetTypeWithOriginType:asset.mediaType];
+//        [assetArr addObject:[PCAssetModel modelWithAsset:asset type:type]];
+//        
+//        NSDictionary *dict = @{@"date":date,@"assets":assetArr};
+//        [photoArr addObject:dict];
+//        
+//        for (int j = i+1; j < album.count; j++) {
+//            PHAsset *nextAsset = album[j];
+//            NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+//            formatter.dateFormat = @"yyyy-MM-dd";
+//            NSString *nextDate = [formatter stringFromDate:nextAsset.modificationDate];
+//            if ([nextDate isEqualToString:date] ) {
+//                
+//            }
+//        }
+//        
+//        
+//        
+//        
+//    }
+    
+    NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc]initWithKey:@"modificationDate" ascending:YES];
+    [photoArr sortUsingDescriptors:@[sortDescriptor]];
+
+    NSMutableArray *result = [[NSMutableArray alloc]init];
+    for (int i = 0; i < photoArr.count; i++) {
+        PCAssetModel *model = photoArr[i];
+        NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+        formatter.dateFormat = @"yyyy-MM-dd";
+         NSString *date = [formatter stringFromDate:model.modificationDate];
+        if (i == 0) {
+            NSMutableArray *assetArr = [[NSMutableArray alloc]init];
+            [assetArr addObject:model];
+            NSDictionary *dict = @{@"date":date,@"assets":assetArr};
+            [result addObject:dict];
+        }else{
+            PCAssetModel *preModel = photoArr[i-1];
+            NSString *preDate = [formatter stringFromDate:preModel.modificationDate];
+            if ([date  isEqualToString:preDate]) {
+                //如果当前model和上一个model的日期一样，就加入同一个数组
+                NSDictionary *dict = [result lastObject];
+                NSMutableArray *arr = dict[@"assets"];
+                [arr addObject:model];
+                
+            }else{
+                //否则加入新数组
+                NSMutableArray *assetArr = [[NSMutableArray alloc]init];
+                [assetArr addObject:model];
+                NSDictionary *dict = @{@"date":date,@"assets":assetArr};
+                [result addObject:dict];
+                
+            }
+            
+            
+        }
+        
+       
+        
+    }
+    
+//    NSLog(@"arr:%@",result);
+    return result;
+    
 }
 
 - (PCAssetType)assetTypeWithOriginType:(NSInteger)originType{

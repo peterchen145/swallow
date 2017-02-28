@@ -14,6 +14,7 @@
     PCAssetModel *model = [[PCAssetModel alloc]init];
     model.asset = asset;
     model.type = type;
+    model.modificationDate = asset.modificationDate;
     return model;
 }
 

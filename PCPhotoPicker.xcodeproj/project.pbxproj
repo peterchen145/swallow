@@ -10,6 +10,7 @@
 		8A03819C1E487B9A00369C34 /* photopicker_state_normal@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A03819B1E487B9A00369C34 /* photopicker_state_normal@2x.png */; };
 		8A03819E1E487BA200369C34 /* photopicker_state_selected@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 8A03819D1E487BA200369C34 /* photopicker_state_selected@2x.png */; };
 		8A130D211E45BE3B009CF91C /* PCAlbumListViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A130D201E45BE3B009CF91C /* PCAlbumListViewController.m */; };
+		8A5A693B1E63FFAD00264858 /* PCCollectionReusableHeaderView.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A5A693A1E63FFAD00264858 /* PCCollectionReusableHeaderView.m */; };
 		8A8178541E442DB300DDC53D /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178531E442DB300DDC53D /* main.m */; };
 		8A8178571E442DB300DDC53D /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178561E442DB300DDC53D /* AppDelegate.m */; };
 		8A81785A1E442DB300DDC53D /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 8A8178591E442DB300DDC53D /* ViewController.m */; };
@@ -49,6 +50,8 @@
 		8A03819D1E487BA200369C34 /* photopicker_state_selected@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "photopicker_state_selected@2x.png"; sourceTree = "<group>"; };
 		8A130D1F1E45BE3B009CF91C /* PCAlbumListViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCAlbumListViewController.h; sourceTree = "<group>"; };
 		8A130D201E45BE3B009CF91C /* PCAlbumListViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCAlbumListViewController.m; sourceTree = "<group>"; };
+		8A5A69391E63FFAD00264858 /* PCCollectionReusableHeaderView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PCCollectionReusableHeaderView.h; sourceTree = "<group>"; };
+		8A5A693A1E63FFAD00264858 /* PCCollectionReusableHeaderView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PCCollectionReusableHeaderView.m; sourceTree = "<group>"; };
 		8A81784F1E442DB300DDC53D /* PCPhotoPicker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PCPhotoPicker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A8178531E442DB300DDC53D /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		8A8178551E442DB300DDC53D /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -192,6 +195,8 @@
 				8AB125481E457C1000938446 /* PCAssetCell.m */,
 				8AB1254A1E45810900938446 /* ScrollBar.h */,
 				8AB1254B1E45810900938446 /* ScrollBar.m */,
+				8A5A69391E63FFAD00264858 /* PCCollectionReusableHeaderView.h */,
+				8A5A693A1E63FFAD00264858 /* PCCollectionReusableHeaderView.m */,
 			);
 			path = views;
 			sourceTree = "<group>";
@@ -366,6 +371,7 @@
 				8AE3A9021E4467DB00BBDBDC /* PCAlbumCell.m in Sources */,
 				8A8178541E442DB300DDC53D /* main.m in Sources */,
 				8A81788A1E442EA000DDC53D /* PCPhotoPickerController.m in Sources */,
+				8A5A693B1E63FFAD00264858 /* PCCollectionReusableHeaderView.m in Sources */,
 				8AE3A8FF1E4463DE00BBDBDC /* PCAlbumModel.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

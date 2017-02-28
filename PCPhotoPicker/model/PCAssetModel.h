@@ -25,6 +25,7 @@ typedef NS_ENUM(NSUInteger, PCAssetType){
 @property (strong, nonatomic) UIImage *originImg;
 @property (strong, nonatomic) UIImage *thumbnail;
 @property (strong, nonatomic) UIImage *previewImg;
+@property (strong, nonatomic) NSDate *modificationDate;
 
 @property (assign, nonatomic) UIImageOrientation imageOrientation;
 
