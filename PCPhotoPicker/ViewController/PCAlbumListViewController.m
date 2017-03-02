@@ -58,7 +58,7 @@ NSString *headerIdentifier = @"collectionHeader";
 const NSInteger numberPerLine = 4; //每行的图片cell的个数
 const CGFloat scrollBarWidth = 30;
 const CGFloat collectionHeaderHeight = 30;
-
+const CGFloat minLineSpacing = 10;
 @implementation PCAlbumListViewController
 
 - (void)viewDidLoad {
@@ -106,7 +106,7 @@ const CGFloat collectionHeaderHeight = 30;
     CGFloat height = 100;
     layout.itemSize = CGSizeMake(width,width);
     layout.minimumInteritemSpacing = 1;
-    layout.minimumLineSpacing = 1;
+    layout.minimumLineSpacing = minLineSpacing;
     layout.headerReferenceSize = CGSizeMake(width, collectionHeaderHeight);
     self.collectionView = [[UICollectionView alloc]initWithFrame:CGRectMake([UIScreen mainScreen].bounds.size.width/3, 64,[UIScreen mainScreen].bounds.size.width * 2 / 3 - scrollBarWidth, self.view.frame.size.height - 64 - 40) collectionViewLayout:layout];
     self.collectionView.dataSource = self;
@@ -437,94 +437,6 @@ const CGFloat collectionHeaderHeight = 30;
 }
 
 
-//
-////处理第四象限的情况
-//- (void)handlerForForthQuadrantWithCurrentIndexPath:(NSIndexPath *)currentIndexPath preIndexPath:(NSIndexPath *)preIndexPath currentCell:(PCAssetCell *)currentCell preCell:(PCAssetCell *)preCell{
-////    NSLog(@"第四象限");
-//    if (currentIndexPath.section == preIndexPath.section  ) {
-//        //同一个section的情况
-//        if (  currentIndexPath.row > preIndexPath.row) {
-//            
-//            if (currentIndexPath.row - preIndexPath.row == 1) {
-//                //向右滑动，一次增加一个cell
-//                NSLog(@"here");
-//                [self addSingleCellWithCell:currentCell];
-//                
-//            }else if (currentIndexPath.row - preIndexPath.row >1 && currentIndexPath.row - preIndexPath.row < numberPerLine){
-//                //滑动到headerview的地方，把该section的剩下的都选上
-//                for (NSInteger i = preIndexPath.row + 1; i <= currentIndexPath.row; i++) {
-//                    [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//                    
-//                }
-//            }
-//            else if(currentIndexPath.row - preIndexPath.row >= numberPerLine){
-//                //向下滑
-//                
-//                if (currentIndexPath.row - _originIndexPath.row >= numberPerLine) {
-//                    //一直在第四象限
-//                    //向下滑动，一次增加多个cell
-//                    //                NSLog(@"currentrow:%ld",currentIndexPath.row);
-//                    for (NSInteger i = preIndexPath.row + 1; i <= currentIndexPath.row; i++) {
-//                        [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//                        
-//                    }
-//                }else{
-//                    //从第一象限进入第四象限 先把原来的删除（除了第一个cell ）,再加入新的cell
-//                    
-//                    for (NSInteger i = preIndexPath.row; i < _originIndexPath.row; i++) {
-//                        [self removeCellsInLoopWithIndex:i];
-//                    }
-//                    
-//                    for (NSInteger i = _originIndexPath.row + 1; i <= currentIndexPath.row; i++) {
-//                        [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//                    }
-//                }
-//            }
-//        }else if (currentIndexPath.row < preIndexPath.row){
-//            //向左滑
-//            if (preIndexPath.row - currentIndexPath.row == 1) {
-//                [self removeSingleCell:preCell];
-//            }else if (preIndexPath.row - currentIndexPath.row > 1 && preIndexPath.row - currentIndexPath.row < numberPerLine){
-//                 //滑动到headerview的地方，把该section的剩下的都删除
-//                for (NSInteger i = currentIndexPath.row+1 ; i <= preIndexPath.row; i++) {
-//                    [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
-//                }
-//            }
-//            
-//            else if(preIndexPath.row - currentIndexPath.row >= numberPerLine){
-//                //向上滑
-//                for (NSInteger i = currentIndexPath.row+1 ; i <= preIndexPath.row; i++) {
-//                    [self removeCellsInLoopWithIndex:i];
-//                }
-//            }
-//        }
-//
-//    }else if ( currentIndexPath.section > preIndexPath.section){
-//        //向下滑
-//        NSDictionary *preDict = _assets[preIndexPath.section];
-//        NSArray *preArr = preDict[@"assets"];
-//        if (preIndexPath.row < preArr.count - 1) {
-//            //上一个section没有选完,把没选的选上
-//            
-//            for (int i = preIndexPath.row+1; i < preArr.count; i++) {
-//                [self addCellInLoopWithIndex:i section:preIndexPath.section];
-//            }
-//        }
-//        
-//        for (int i = 0; i < currentIndexPath.row + 1 ; i++ ) {
-//            [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//        }
-//        
-//    }
-//    else if (currentIndexPath.section < preIndexPath.section){
-//        //向上滑
-//        for (int i = preIndexPath.row; i > 0; i--) {
-//            [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
-//        }
-//    }
-//    
-//}
-
 
 //处理第四象限的情况
 - (void)handlerForForthQuadrantWithCurrentLocation:(CGPoint)currentLocation {
@@ -574,7 +486,7 @@ const CGFloat collectionHeaderHeight = 30;
                         }
                     }
                 }else if (currentIndexPath.row - preIndexPath.row < numberPerLine && currentIndexPath.row - preIndexPath.row > 1){
-                    //从headerview  进入, 有点类似从第一象限进入第四象限
+                    //从headerview  进入, 从第一象限进入第四象限
                     //如果初始cell左边有选中的，先删除
                     if (_originCell.indexPath.row > 0 ) {
                         for (int i = 0; i < _originCell.indexPath.row; i++) {
@@ -595,6 +507,7 @@ const CGFloat collectionHeaderHeight = 30;
                     [self removeSingleCell:preCell];
                 }
                 else if (preIndexPath.row - currentIndexPath.row > 1 && preIndexPath.row - currentIndexPath.row < numberPerLine){
+                    //从底部的headerview回来到该section
                     for (NSInteger i = currentIndexPath.row+1 ; i <= preIndexPath.row; i++) {
                         [self removeCellsInLoopWithIndex:i section:currentIndexPath.section];
                     }
@@ -615,7 +528,7 @@ const CGFloat collectionHeaderHeight = 30;
             }
         }
     }else{
-        if (currentLocation.y > (preCell.frame.origin.y + itemCellHeight )  &&  !currentIndexPath) {
+        if (currentLocation.y > (preCell.frame.origin.y + itemCellHeight + minLineSpacing )  &&  !currentIndexPath) {
             //如果滑动到空白的地方,有可能是headerview，也有可能是同一个section的空白地带
             NSInteger currentSection = preIndexPath.section ;
             NSDictionary *dict = _assets[currentSection];
@@ -654,7 +567,7 @@ const CGFloat collectionHeaderHeight = 30;
             
             
         }
-        else  if (currentLocation.y < preCell.frame.origin.y && !currentIndexPath) {
+        else  if (currentLocation.y < preCell.frame.origin.y - minLineSpacing && !currentIndexPath) {
             //向上滑到section headerview
             NSInteger currentSection = preIndexPath.section - 1;
             NSDictionary *dict = _assets[currentSection];
@@ -668,53 +581,27 @@ const CGFloat collectionHeaderHeight = 30;
                 [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
             }
             
+        }else if (currentLocation.y > preCell.frame.origin.y && currentLocation.y < preCell.frame.origin.y + itemCellHeight&& !currentIndexPath){
+            //从第一象限进入第四象限的空白地带
+            //如果初始cell的row大于0，把初始cell左边的删除掉，
+            if (_originCell.indexPath.row > 0) {
+                for (int i = 0; i<_originCell.indexPath.row; i++) {
+                    [self removeCellsInLoopWithIndex:i section:_originCell.indexPath.section];
+                }
+            }
+            
+            //再把初始cell右边的选中
+            NSInteger currentSection = _originCell.indexPath.section;
+            NSDictionary *dict = _assets[currentSection];
+            NSArray *arr = dict[@"assets"];
+            for (int i = _originCell.indexPath.row + 1; i<arr.count; i++) {
+                [self addCellInLoopWithIndex:i section:_originCell.indexPath.section];
+            }
         }
     }
 }
 
 //第一象限的情况
-//- (void)handlerForFirstQuadrantWithCurrentIndexPath:(NSIndexPath *)currentIndexPath preIndexPath:(NSIndexPath *)preIndexPath currentCell:(PCAssetCell *)currentCell preCell:(PCAssetCell *)preCell{
-////    NSLog(@"第一象限");
-//    if (currentIndexPath.row < preIndexPath.row) {
-//        
-//        if (preIndexPath.row - currentIndexPath.row == 1) {
-//            //向左滑动，一次增加一个cell
-//            [self addSingleCellWithCell:currentCell];
-//        }else if (preIndexPath.row - currentIndexPath.row >= numberPerLine){
-//            //向上滑
-//            if (_originIndexPath.row - currentIndexPath.row >= numberPerLine) {
-//                //一直在第一象限
-//                //向上滑动，一次增加多个cell 注意添加cell的顺序  从高到低添加
-//                for ( NSInteger i = preIndexPath.row - 1 ; i >= currentIndexPath.row; i--) {
-//
-//                     [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//                }
-//            }else{
-//                //从第四象限进入第一象限
-//                for (NSInteger i = _originIndexPath.row + 1; i <= preIndexPath.row; i++) {
-//                   [self removeCellsInLoopWithIndex:i];
-//                }
-//                
-//                //注意添加cell的顺序  从高到低添加
-//                for (NSInteger i = _originIndexPath.row - 1; i > currentIndexPath.row; i--) {
-//                     [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-//                }
-//            }
-//        }
-//    }else if (currentIndexPath.row > preIndexPath.row){
-//        
-//        if (currentIndexPath.row -preIndexPath.row == 1) {
-//            //向右滑
-//           [self removeSingleCell:preCell];
-//        }else if(currentIndexPath.row -preIndexPath.row >= numberPerLine){
-//            //向下滑
-//            for (NSInteger i = preIndexPath.row ; i < currentIndexPath.row; i++) {
-//                [self removeCellsInLoopWithIndex:i];
-//            }
-//        }
-//    }
-//}
-
 - (void)handlerForFirstQuadrantWithCurrentLocation:(CGPoint)currentLocation{
     CGFloat kXMNMargin = 1;
     CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
@@ -727,11 +614,14 @@ const CGFloat collectionHeaderHeight = 30;
     if (currentIndexPath) {
         if (currentIndexPath.section == preIndexPath.section  ) {
             if (currentIndexPath.row < preIndexPath.row) {
-                
+//                NSLog(@"shit");
                 if (preIndexPath.row - currentIndexPath.row == 1) {
                     //向左滑动，一次增加一个cell
+//                    NSLog(@"here");
                     [self addSingleCellWithCell:currentCell];
-                }else if (preIndexPath.row - currentIndexPath.row >= numberPerLine){
+                }
+                else if (preIndexPath.row - currentIndexPath.row >= numberPerLine){
+//                    NSLog(@"FUCK");
                     //向上滑
                     if (_originIndexPath.row - currentIndexPath.row >= numberPerLine) {
                         //一直在第一象限
@@ -752,12 +642,41 @@ const CGFloat collectionHeaderHeight = 30;
                         }
                     }
                 }
+                else if (preIndexPath.row - currentIndexPath.row > 1 && preIndexPath.row - currentIndexPath.row < numberPerLine){
+                    //有可能是从第四象限的空白区域进入第一象限
+                    //判断初始cell是不是在最后一排
+                    NSDictionary *dict = _assets[preIndexPath.section];
+                    NSArray *arr = dict[@"assets"];
+                    NSInteger row = arr.count - 1;
+                    NSInteger sub = numberPerLine - (arr.count % numberPerLine);
+                    NSInteger div = arr.count / numberPerLine;
+                    NSInteger firstIndexOfLastRow = div * numberPerLine;// 最后一排最左边的row值
+                    if (_originCell.indexPath.row >= firstIndexOfLastRow && _originCell.indexPath.row < arr.count) {
+                        //在最后一排，从第四象限的空白区域进入第一象限
+                        //先把第四象限的删除
+                        for (int i = _originCell.indexPath.row + 1; i <= preIndexPath.row; i++) {
+                            [self removeCellsInLoopWithIndex:i section:_originCell.indexPath.section];
+                        }
+                        
+                        for (int i = _originCell.indexPath.row - 1; i >= currentIndexPath.row; i--) {
+                            [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                        }
+                    }else{
+                        for (int i = preIndexPath.row - 1; i >= currentIndexPath.row; i--) {
+                            [self addCellInLoopWithIndex:i section:preIndexPath.section];
+                        }
+                    }
+                    
+                    
+                    
+                }
             }else if (currentIndexPath.row > preIndexPath.row){
                 
                 if (currentIndexPath.row -preIndexPath.row == 1) {
                     //向右滑
                     [self removeSingleCell:preCell];
                 }else if (currentIndexPath.row - preIndexPath.row >1 && currentIndexPath.row - preIndexPath.row < numberPerLine){
+                    //从上部的headerview回到该section
                     for (NSInteger i = preIndexPath.row ; i < currentIndexPath.row; i++) {
                         [self removeCellsInLoopWithIndex:i section:currentIndexPath.section];
                     }
@@ -781,28 +700,39 @@ const CGFloat collectionHeaderHeight = 30;
             }
         }
     }else{
-        if (currentLocation.y < preCell.frame.origin.y && !currentIndexPath) {
+        if (currentLocation.y < preCell.frame.origin.y - minLineSpacing && !currentIndexPath) {
+           
             //向上滑到section headerview
-            if (_originCell.indexPath.row > numberPerLine - 1) {
-                //如果初始的cell不在第一排  把当前section的都选上
+            
+            if (preIndexPath.section < _originCell.indexPath.section) {
                 for (int i = preIndexPath.row - 1; i >= 0; i--) {
                     [self addCellInLoopWithIndex:i section:preIndexPath.section];
                 }
-            }else{
-                //如果初始cell在第一排，有点类似从第四象限进入第一象限 如果在第四象限有选中的cell，先删除,
-                for (int i = _originCell.indexPath.row +1; i <= preCell.indexPath.row ; i++) {
-                    [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
-                }
                 
-                //在把初始cell左边的cell都选中
-                if (_originCell.indexPath.row > 0 ) {
-                    for (int i = _originCell.indexPath.row - 1; i >= 0; i--) {
-                        [self addCellInLoopWithIndex:i section:_originCell.indexPath.section];
+                
+            }else if (preIndexPath.section == _originCell.indexPath.section){
+                if (_originCell.indexPath.row > numberPerLine - 1) {
+                    //如果初始的cell不在第一排  把当前section的都选上
+                    for (int i = preIndexPath.row - 1; i >= 0; i--) {
+                        [self addCellInLoopWithIndex:i section:preIndexPath.section];
                     }
+                }else{
+                    //如果初始cell在第一排，从第四象限进入第一象限 如果在第四象限有选中的cell，先删除,
+                    for (int i = _originCell.indexPath.row +1; i <= preCell.indexPath.row ; i++) {
+                        [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                    }
+                    
+                    //在把初始cell左边的cell都选中
+                    if (_originCell.indexPath.row > 0 ) {
+                        for (int i = _originCell.indexPath.row - 1; i >= 0; i--) {
+                            [self addCellInLoopWithIndex:i section:_originCell.indexPath.section];
+                        }
+                    }
+                    
+                    
                 }
-                
-                
             }
+           
             
             
             if (currentLocation.y < preCell.frame.origin.y - collectionHeaderHeight) {
@@ -820,12 +750,30 @@ const CGFloat collectionHeaderHeight = 30;
             
             
         }else if (currentLocation.y > preCell.frame.origin.y + itemCellHeight &&   !currentIndexPath){
+            //向下滑动到headerview 或当前section的空白地带
             NSDictionary *dict = _assets[preIndexPath.section];
             NSArray *arr = dict[@"assets"];
             NSInteger row = arr.count - 1;
-            for (int i = preIndexPath.row ; i<=row ; i++) {
-                [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+            //判断是滑倒headerview还是section的空白地带
+            NSInteger sub = numberPerLine - (arr.count % numberPerLine);
+            NSInteger div = arr.count / numberPerLine;
+            NSInteger firstIndexOfLastRow = div * numberPerLine;// 最后一排最左边的row值
+            
+            if(preIndexPath.row >= firstIndexOfLastRow && preIndexPath.row < arr.count){
+                //滑动到headerview
+                NSLog(@"diu");
+                for (int i = preIndexPath.row ; i<=row ; i++) {
+                    [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                }
+            }else  if (arr.count - 1 >= (preIndexPath.row + sub)  && (preIndexPath.row + sub) >= firstIndexOfLastRow  ) {
+                //滑动到section的空白地带
+                
+                for (int i = preIndexPath.row; i< firstIndexOfLastRow; i++) {
+                    [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                }
             }
+            
+            
             
         }
 //        else if (currentLocation.y > preCell.frame.origin.y && currentLocation.y < preCell.frame.origin.y + itemCellHeight &&   !currentIndexPath){
@@ -837,89 +785,252 @@ const CGFloat collectionHeaderHeight = 30;
 
 
 //第三象限
-- (void)handlerForThirdQuadrantWithCurrentIndexPath:(NSIndexPath *)currentIndexPath preIndexPath:(NSIndexPath *)preIndexPath currentCell:(PCAssetCell *)currentCell preCell:(PCAssetCell *)preCell{
-//    NSLog(@"第三象限");
-    if (currentIndexPath.row < preIndexPath.row) {
-        if (preIndexPath.row -currentIndexPath.row == 1) {
-            //向左滑
-            [self removeSingleCell:preCell];
-        }else if(preIndexPath.row -currentIndexPath.row >= numberPerLine){
-            //向上滑
-            for (NSInteger i = preIndexPath.row ; i > currentIndexPath.row; i--) {
-                [self removeCellsInLoopWithIndex:i];
-            }
-        }
-        
-    }else if (currentIndexPath.row > preIndexPath.row){
-        
-        if (currentIndexPath.row - preIndexPath.row == 1) {
-            //向右滑动，一次增加一个cell
-            [self addSingleCellWithCell:currentCell];
-        }else if (currentIndexPath.row - preIndexPath.row >= numberPerLine){
-            //向下滑
-            if (currentIndexPath.row - _originIndexPath.row >= numberPerLine) {
-                //一直在第三象限
-                //向下滑动，一次增加多个cell
-                for (NSInteger i = preIndexPath.row + 1 ; i < currentIndexPath.row; i++) {
-                     [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-                }
-            }else{
-                //从第二象限进入第三象限
-                for (NSInteger i = preIndexPath.row ; i < _originIndexPath.row; i++) {
-                    [self removeCellsInLoopWithIndex:i];
+- (void)handlerForThirdQuadrantWithCurrentLocation:(CGPoint)currentLocation{
+    CGFloat kXMNMargin = 1;
+    CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
+    CGFloat itemCellHeight = ([UIScreen mainScreen].bounds.size.width * 2/ 3 - scrollBarWidth) / 4 - kXMNMargin;
+    
+    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
+    NSIndexPath *preIndexPath = [[_selectedIndexPathesForAssets lastObject]lastObject];
+    PCAssetCell *preCell = [_collectionView cellForItemAtIndexPath:preIndexPath];
+    PCAssetCell *currentCell  = [_collectionView cellForItemAtIndexPath:currentIndexPath];
+    if (currentIndexPath) {
+        if (currentIndexPath.section == preIndexPath.section  ) {
+            if (currentIndexPath.row < preIndexPath.row) {
+                if (preIndexPath.row -currentIndexPath.row == 1) {
+                    //向左滑
+                    [self removeSingleCell:preCell];
+                }else if (preIndexPath.row - currentIndexPath.row > 1 &&preIndexPath.row -currentIndexPath.row < numberPerLine ){
+                    //从底部headerview回到该section
+                    for (int i = preIndexPath.row; i>currentIndexPath.row; i--) {
+                        [self removeCellsInLoopWithIndex:i section:currentIndexPath.section];
+                    }
                 }
                 
-                for (NSInteger i = _originIndexPath.row + 1; i < currentIndexPath.row; i++) {
-                     [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                
+                else if(preIndexPath.row -currentIndexPath.row >= numberPerLine){
+                    //向上滑
+                    for (NSInteger i = preIndexPath.row ; i > currentIndexPath.row; i--) {
+                        [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                    }
+                }
+                
+            }else if (currentIndexPath.row > preIndexPath.row){
+                
+                if (currentIndexPath.row - preIndexPath.row == 1) {
+                    //向右滑动，一次增加一个cell
+                    [self addSingleCellWithCell:currentCell];
+                }else if (currentIndexPath.row - preIndexPath.row >= numberPerLine){
+                    //向下滑
+                    
+                    if (currentIndexPath.section == _originIndexPath.section) {
+                        //在初始的section里
+                        if (currentIndexPath.row - _originIndexPath.row >= numberPerLine) {
+                            //一直在第三象限
+                            //向下滑动，一次增加多个cell
+                            for (NSInteger i = preIndexPath.row + 1 ; i < currentIndexPath.row; i++) {
+                                [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                            }
+                        }else{
+                            //从第二象限进入第三象限
+                            for (NSInteger i = preIndexPath.row ; i < _originIndexPath.row; i++) {
+                                [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                            }
+                            
+                            for (NSInteger i = _originIndexPath.row + 1; i < currentIndexPath.row; i++) {
+                                [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                            }
+                        }
+                    }else if(currentIndexPath.section > _originIndexPath.section){
+                        //进入新的section
+                        for (int i = preIndexPath.row + 1; i<= currentIndexPath.row; i++) {
+                            [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                        }
+                        
+                    }
+                    
                 }
             }
+        }else if (currentIndexPath.section > preIndexPath.section){
+            
+            //向下滑动到新的section
+            for (int i = 0; i <= currentIndexPath.row; i++) {
+                [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+            }
+            
         }
+    }else{
+        if (currentLocation.y > (preCell.frame.origin.y + itemCellHeight + minLineSpacing )  &&  !currentIndexPath) {
+            //进入headerview
+            //判断precell的row是不是比初始cell小 ，如果是，则从第二象限进入第三象限，要把第二象限中的cell先删除
+            NSInteger currentSection = _originCell.indexPath.section;
+            NSDictionary *dict = _assets[currentSection];
+            NSArray *arr = dict[@"assets"];
+            if (preCell.indexPath.row < _originCell.indexPath.row) {
+                
+                for (int i = _originCell.indexPath.row - 1; i >= preCell.indexPath.row; i--) {
+                    [self removeCellsInLoopWithIndex:i section:_originCell.indexPath.section];
+                }
+                //再把初始cell右边的选上
+                for (int i = _originCell.indexPath.row + 1; i <arr.count; i++) {
+                    [self addCellInLoopWithIndex:i section:_originCell.indexPath.section];
+                }
+            }else{
+                for (int i = _originCell.indexPath.row + 1; i <arr.count; i++) {
+                    [self addCellInLoopWithIndex:i section:_originCell.indexPath.section];
+                }
+            }
+            
+            if (currentLocation.y > (preCell.frame.origin.y + itemCellHeight + collectionHeaderHeight)  &&  !currentIndexPath){
+                //通过headerview进入下一个section的空白地带
+                NSInteger currentSection = preIndexPath.section + 1;
+                NSDictionary *dict = _assets[currentSection];
+                NSArray *arr = dict[@"assets"];
+                for (int i = 0; i < arr.count; i++) {
+                    [self addCellInLoopWithIndex:i section:currentSection];
+                }
+            }
+            
+            
+            
+        }else if (currentLocation.y < preCell.frame.origin.y - minLineSpacing){
+            //向上滑动到headerview
+            for (int i = preIndexPath.row; i>= 0; i--) {
+                [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+            }
+        }
+        
+        
+        
     }
 }
 
+
+
 //第二象限
-- (void)handlerForSecondQuadrantWithCurrentIndexPath:(NSIndexPath *)currentIndexPath preIndexPath:(NSIndexPath *)preIndexPath currentCell:(PCAssetCell *)currentCell preCell:(PCAssetCell *)preCell{
-//    NSLog(@"第二象限");
-    if (currentIndexPath.row > preIndexPath.row) {
-        
-        if (currentIndexPath.row - preIndexPath.row == 1) {
-            //向右滑动，一次删除一个cell
-           [self removeSingleCell:preCell];
-            
-        }else if(currentIndexPath.row - preIndexPath.row >= numberPerLine){
-            
-            //向下滑动，一次增加多个cell
-            for (NSInteger i = preIndexPath.row  ; i < currentIndexPath.row; i++) {
-               [self removeCellsInLoopWithIndex:i];
-            }
-        }
-        
-        
-    }else if (currentIndexPath.row < preIndexPath.row){
-        
-        if (preIndexPath.row - currentIndexPath.row == 1) {
-            //向左滑
-            [self addSingleCellWithCell:currentCell];
-        }else if(preIndexPath.row - currentIndexPath.row >= numberPerLine){
-            //向上滑
-            if (_originIndexPath.row - currentIndexPath.row >= numberPerLine) {
-                //一直在第二象限
-                NSLog(@"here");
-                for (NSInteger i = preIndexPath.row - 1 ; i >= currentIndexPath.row; i--) {
-                     [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+- (void)handlerForSecondQuadrantWithCurrentLocation:(CGPoint)currentLocation{
+    CGFloat kXMNMargin = 1;
+    CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
+    CGFloat itemCellHeight = ([UIScreen mainScreen].bounds.size.width * 2/ 3 - scrollBarWidth) / 4 - kXMNMargin;
+    
+    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
+    NSIndexPath *preIndexPath = [[_selectedIndexPathesForAssets lastObject]lastObject];
+    PCAssetCell *preCell = [_collectionView cellForItemAtIndexPath:preIndexPath];
+    PCAssetCell *currentCell  = [_collectionView cellForItemAtIndexPath:currentIndexPath];
+    if (currentIndexPath) {
+        if (currentIndexPath.section == preIndexPath.section  ) {
+            if (currentIndexPath.row > preIndexPath.row) {
+                
+                if (currentIndexPath.row - preIndexPath.row == 1) {
+                    //向右滑动，一次删除一个cell
+                    [self removeSingleCell:preCell];
+                    
+                }else if (currentIndexPath.row - preIndexPath.row > 1 && currentIndexPath.row - preIndexPath.row < numberPerLine){
+                    //从上部的headerview回到该section
+                    for (NSInteger i = preIndexPath.row  ; i < currentIndexPath.row; i++) {
+                        [self removeCellsInLoopWithIndex:i section:currentIndexPath.section];
+                    }
                 }
-            }else{
-                //从第三象限进入第二象限
-                NSLog(@"fuck");
-                for (NSInteger i = _originIndexPath.row + 1; i <= preIndexPath.row; i++) {
-                    [self removeCellsInLoopWithIndex:i];
+                else if(currentIndexPath.row - preIndexPath.row >= numberPerLine){
+                    
+                    //向下滑动，一次删除多个cell
+                    for (NSInteger i = preIndexPath.row  ; i < currentIndexPath.row; i++) {
+                        [self removeCellsInLoopWithIndex:i section:currentIndexPath.section];
+                    }
                 }
                 
-                for (NSInteger i = _originIndexPath.row - 1; i > currentIndexPath.row; i--) {
-                    [self addCellInLoopWithIndex:i section:currentIndexPath.section];
-                }
+                
+            }else if (currentIndexPath.row < preIndexPath.row){
+                
+                
+                
+                    if (preIndexPath.row - currentIndexPath.row == 1) {
+                        //向左滑
+                        [self addSingleCellWithCell:currentCell];
+                    }else if (preIndexPath.row - currentIndexPath.row > 1 && preIndexPath.row - currentIndexPath.row < numberPerLine){
+                        //从第三象限的headerview进入第二象限
+                        for (int i = preIndexPath.row - 1; i>= currentIndexPath.row; i--) {
+                            [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                        }
+                    }
+                    
+                    
+                    else if(preIndexPath.row - currentIndexPath.row >= numberPerLine){
+                        
+                        if (currentIndexPath.section == _originIndexPath.section) {
+                            //在原始section
+                            //向上滑
+                            if (_originIndexPath.row - currentIndexPath.row >= numberPerLine) {
+                                //一直在第二象限
+                                
+                                for (NSInteger i = preIndexPath.row - 1 ; i >= currentIndexPath.row; i--) {
+                                    [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                                }
+                            }else{
+                                //从第三象限进入第二象限
+                                
+                                for (NSInteger i = _originIndexPath.row + 1; i <= preIndexPath.row; i++) {
+                                    [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+                                }
+                                
+                                for (NSInteger i = _originIndexPath.row - 1; i > currentIndexPath.row; i--) {
+                                    [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                                }
+                            }
+                        }else if(currentIndexPath.section < _originIndexPath.section){
+                            //进入新的section
+                            for (int i = preIndexPath.row - 1; i >= currentIndexPath.row; i--) {
+                                [self addCellInLoopWithIndex:i section:currentIndexPath.section];
+                            }
+                        }
+                    }
+                
+                
+                
+            }
+        }else if (currentIndexPath.section < preIndexPath.section){
+            //通过headerview  滑到上一个section
+            
+            NSDictionary *dict = _assets[currentIndexPath.section];
+            NSArray *arr = dict[@"assets"];
+            NSInteger row = arr.count - 1;
+            for (int i = row; i >= currentIndexPath.row; i--) {
+                [self addCellInLoopWithIndex:i section:currentIndexPath.section];
             }
         }
+        
+        
+    }else{
+        if (currentLocation.y < preCell.frame.origin.y - minLineSpacing && !currentIndexPath) {
+            //向上滑到section headerview
+            //把该section还没选的选上
+            for (int i = preIndexPath.row - 1 ; i >= 0; i--) {
+                [self addCellInLoopWithIndex:i section:preIndexPath.section];
+            }
+            
+            if (currentLocation.y < preCell.frame.origin.y - collectionHeaderHeight) {
+                //通过headerview  滑到上一个section的空白地带
+                NSInteger currentSection = preIndexPath.section - 1;
+                NSDictionary *dict = _assets[currentSection];
+                NSArray *arr = dict[@"assets"];
+                NSInteger row = arr.count - 1;
+                NSInteger bounder =arr.count - (arr.count % numberPerLine );
+                for (int i = row; i >= bounder; i--) {
+                    [self addCellInLoopWithIndex:i section:currentSection];
+                }
+            }
+            
+            
+        }else if (currentLocation.y > preCell.frame.origin.y + itemCellHeight + minLineSpacing && !currentIndexPath){
+            //向下滑动到headerview
+            NSDictionary *dict = _assets[preIndexPath.section];
+            NSArray *arr = dict[@"assets"];
+            NSInteger row = arr.count - 1;
+            for (int i = preIndexPath.row ; i<=row ; i++) {
+                [self removeCellsInLoopWithIndex:i section:preIndexPath.section];
+            }
+        }
+        
     }
 }
 
@@ -1136,28 +1247,18 @@ const CGFloat collectionHeaderHeight = 30;
 
                         [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
                     }else{
-//                        [self handlerForFirstQuadrantWithCurrentIndexPath:currentIndexPath
-//                                                             preIndexPath:preIndexPath
-//                                                              currentCell:currentCell
-//                                                                  preCell:preCell];
                         [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
                     }
                 }
-//                else if (currentLocation.x < _originLocation.x  ){
-//                    //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
-//                    if (currentLocation.y >= _originCellY + _originCell.frame.size.height) {
-//                        [self handlerForThirdQuadrantWithCurrentIndexPath:currentIndexPath
-//                                                             preIndexPath:preIndexPath
-//                                                              currentCell:currentCell
-//                                                                  preCell:preCell];
-//                    }else{
-//                        [self handlerForSecondQuadrantWithCurrentIndexPath:currentIndexPath
-//                                                              preIndexPath:preIndexPath
-//                                                               currentCell:currentCell
-//                                                                   preCell:preCell];
-//                        
-//                    }
-//                }
+                else if (currentLocation.x < _originLocation.x  ){
+                    //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
+                    if (currentLocation.y >= _originCellY + _originCell.frame.size.height) {
+                        [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
+                    }else{
+                        [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+                        
+                    }
+                }
                 //pan手势滑到底部时，collectionview开始自动滚动
                 [self handlerForAutoScroll:pan];
             }
