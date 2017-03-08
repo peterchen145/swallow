@@ -28,7 +28,7 @@ static const CGFloat kStateButtonWidthAndHeight = 30;
     }
     _photoView.contentMode = UIViewContentModeScaleAspectFill;
     _photoView.clipsToBounds = YES;
-    _photoView.backgroundColor = [UIColor redColor];
+//    _photoView.backgroundColor = [UIColor redColor];
     [self.contentView addSubview:_photoView];
 }
 

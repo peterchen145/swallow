@@ -325,7 +325,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     
     NSDictionary *dict = _assets[indexPath.section];
     NSArray *arr = dict[@"assets"];
-//    cell.asset = arr[indexPath.row];
+    cell.asset = arr[indexPath.row];
     UILabel *label = [[UILabel alloc]initWithFrame:CGRectMake(0, 20, 40, 20)];
     label.text = [NSString stringWithFormat:@"%ld   %ld",indexPath.section,indexPath.row];
     label.font = [UIFont systemFontOfSize:10];
@@ -477,7 +477,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         //滑到空白地带
         if (   currentLocation.y >= preCell.frame.origin.y && currentLocation.y < preCell.frame.origin.y + preCell.frame.size.height) {
             //跟前一个cell在同一行，滑动到item之间的空白地带
-            
+//            NSLog(@"here");
             if (currentLocation.x > preCell.frame.origin.x + itemCellWidth) {
                 currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
             }else if(currentLocation.x < preCell.frame.origin.x ){
@@ -507,7 +507,9 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                 
             }else if (lastCell && currentLocation.y >= lastCell.frame.origin.y && currentLocation.y <= lastCell.frame.origin.y + lastCell.frame.size.height){
                 //2:滑到最后一行，该section没有结束，此时，lastcell是存在的
-                NSInteger currentRow = preIndexPath.row + numberPerLine;
+                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
+                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
+                NSInteger currentRow = row * numberPerLine + low;
                 if (currentRow > lastIndexPath.row) {
                     currentRow = lastIndexPath.row;
                 }
@@ -515,13 +517,16 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 //                NSLog(@"tow");
             }else if (lastCell && currentLocation.y < lastCell.frame.origin.y){
                 //3:没到最后一行，lastcell已经生成的情况
-                NSInteger currentRow = preIndexPath.row + numberPerLine;
+                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
+                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
+                NSInteger currentRow = row * numberPerLine + low ;
                 currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:lastIndexPath.section];
 //                NSLog(@"three");
             }else if (!lastCell && preIndexPath.row < preSectionArr.count - 1){
                 //4:没到最后一行，lastcell还没生成的情况
-                NSInteger currentRow = preIndexPath.row + numberPerLine;
-                
+                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
+                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
+                NSInteger currentRow = row * numberPerLine + low ;
                 currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
 //                NSLog(@"four");
             }
@@ -633,10 +638,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
             PCAssetCell *firstCell = [_collectionView cellForItemAtIndexPath:firstIndexPath];
             if (firstCell &&  currentLocation.y < firstCell.frame.origin.y ) {
                 //只有小于前一个section的第一个cell的y坐标时，才是真正的进入到上一个section
-//                NSDictionary *dict = _assets[preIndexPath.section ];
-//                NSArray *preSectionArr = dict[@"assets"];
-//                NSIndexPath *lastIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count-1 inSection:preIndexPath.section - 1];
-//                PCAssetCell *lastCell = [_collectionView cellForItemAtIndexPath:lastIndexPath];
                 
                 NSInteger currentRow = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace));
                 
@@ -692,10 +693,13 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 
         
     }
-    
+    if(!currentIndexPath){
+        //  如果这时currentindexpath还是空，就设此值
+        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
+    }
     //说明滑到了一个cell上
-    PCAssetCell *currentCell = [_collectionView cellForItemAtIndexPath:preIndexPath];
-//    NSLog(@"row:%ld",currentIndexPath.row);
+    
+    NSLog(@"row:%ld",currentIndexPath.row);
     if (currentIndexPath.section == preIndexPath.section) {
         //同一个section的情况
 //        NSLog(@"same section");
@@ -988,7 +992,10 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         
         
     }
-    
+    if(!currentIndexPath){
+        //  如果这时currentindexpath还是空，就设此值
+        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
+    }
 //    NSLog(@"row:%ld   pre index:%@",currentIndexPath.row,preIndexPath);
     
     if (currentIndexPath.section == preIndexPath.section) {
@@ -1072,7 +1079,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     if (!currentIndexPath) {
 
         if (currentLocation.y >=preCell.frame.origin.y && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height) {
-            NSLog(@"hell");
+            
             if (currentLocation.x > preCell.frame.origin.x + preCell.frame.size.width) {
                 currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row  inSection:preIndexPath.section];
             }else if (currentLocation.x < preCell.frame.origin.x){
@@ -1406,7 +1413,10 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                 currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
             }
         }
-
+    if(!currentIndexPath){
+        //  如果这时currentindexpath还是空，就设此值
+        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
+    }
     //滑到一个cell上
 //     NSLog(@"cur row:%ld  pre row:%ld",currentIndexPath.row,preIndexPath.row);
     if (currentIndexPath.section == preIndexPath.section) {
@@ -1474,7 +1484,8 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 //选择结束后，开始拖动
 - (void)handlerWhenSelectionDoneWithPanInTheBeginState:(UIGestureRecognizer *)pan{
     _originPoint = [pan locationInView:self.view];
-    
+    CGFloat kXMNMargin = 1;
+    CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
     if (_selectedImgViewArr.count > 0) {
         [_selectedImgViewArr removeAllObjects];
     }
@@ -1488,9 +1499,13 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                 PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
                 cell.alpha = 0.2;
                 if (i <= 15) { 
-                    CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y);
-                    UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , cell.frame.size.width, cell.frame.size.height)];
-                    imgV.image = cell.photoView.image;
+                    CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y - _collectionView.contentOffset.y);
+                    UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , itemCellWidth, itemCellWidth)];
+                    NSDictionary *dict = _assets[index.section];
+                    NSArray *assets = dict[@"assets"];
+                    PCAssetModel *asset = assets[index.row];
+                    
+                    imgV.image = asset.thumbnail;
                     imgV.hidden = NO;
                     [_selectedImgViewArr addObject:imgV];
                     [self.view addSubview:imgV];
@@ -1506,7 +1521,11 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     
     for (int i = 0; i< _selectedImgViewArr.count; i++) {
         UIImageView *imgV = _selectedImgViewArr[i];
-        imgV.center = CGPointMake(point.x + i*2, point.y + i*2);
+        [UIView animateWithDuration:0.1
+                         animations:^{
+                             imgV.center = CGPointMake(point.x + i*2, point.y + i*2);
+                         }];
+        
     }
     
     
@@ -1622,11 +1641,11 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     if (currentLocation.x >= _originLocation.x ) {
         //                NSLog(@"right");
         //如果y坐标大于起始cell的y坐标，处于第四象限,否则，处于第一象限（注意不是起始y坐标，因为起始的y坐标是大于起始cell的y坐标的，即使比起始y坐标小也有可能处于第四象限， ）
-        if (currentLocation.y >= _originCellY) {
+        if (currentLocation.y >= _originCellY ) {
             //                    NSLog(@"forth");
             
             [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
-        }else if(currentLocation.y < _originCellY - minLineSpacing){
+        }else if(currentLocation.y < _originCellY - minLineSpacing  && currentLocation.y > 0){
             [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
         }
     }
@@ -1634,7 +1653,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
         if (currentLocation.y >= _originCellY + _originCell.frame.size.height) {
             [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
-        }else{
+        }else if(currentLocation.y > 0){
             [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
             
         }
@@ -1746,14 +1765,37 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                                                       
                                                       if (_collectionViewMoveUp ) {
                                                           yOffset -= 4;
+                                                          _rolling = YES;
                                                           if (_collectionView.contentOffset.y > 0) {
                                                               [_collectionView setContentOffset:CGPointMake(_collectionView.contentOffset.x, yOffset)];
-                                                          }else{
-                                                              //滚动到最顶部的时候，顶部的几个cell没有被自动选中，在此选中
-                                                              for (int i = 3; i > -1 ; i--) {
-                                                                  [self addCellInLoopWithIndex:i];
+                                                              
+                                                              NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
+                                                              NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
+                                                              PCAssetCell *preCell = [_collectionView cellForItemAtIndexPath:preIndexPath];
+                                                              NSDictionary *dict = _assets[preIndexPath.section ];
+                                                              NSArray *preSectionArr = dict[@"assets"];
+                                                              NSIndexPath *lastIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count-1 inSection:preIndexPath.section];
+                                                              PCAssetCell *lastCell = [_collectionView cellForItemAtIndexPath:lastIndexPath];
+                                                              
+                                                              NSMutableArray *items = _collectionView.indexPathsForVisibleItems.mutableCopy;
+                                                              [items sortUsingComparator:^NSComparisonResult(NSIndexPath * obj1, NSIndexPath * obj2) {
+                                                                  return [obj1 compare:obj2];
+                                                              }];
+                                                              for (NSInteger i = 0; i < items.count; i++) {
+                                                                  NSIndexPath *index = items[i];
+                                                                  if (index.section == preIndexPath.section && index.row < preIndexPath.row) {
+                                                                      [self addCellInLoopWithIndex:index.row section:index.section];
+                                                                  }else if (index.section < preIndexPath.section){
+                                                                      [self addCellInLoopWithIndex:index.row section:index.section];
+                                                                  }
                                                               }
+                                                              
                                                           }
+                                                              //滚动到最顶部的时候，顶部的几个cell没有被自动选中，在此选中
+//                                                              for (int i = 3; i > -1 ; i--) {
+//                                                                  [self addCellInLoopWithIndex:i];
+//                                                              }
+//                                                          }
                                                       }else{
                                                           yOffset += 4;
                                                           if (_collectionView.contentOffset.y + _collectionView.frame.size.height < _collectionView.contentSize.height) {
@@ -1766,7 +1808,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 //                                                              NSLog(@"index:%@",_collectionView.indexPathsForVisibleItems);
                                                                NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
                                                               NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
-                                                              NSInteger preRow = preIndexPath.row;
                                                               PCAssetCell *preCell = [_collectionView cellForItemAtIndexPath:preIndexPath];
                                                               NSDictionary *dict = _assets[preIndexPath.section ];
                                                               NSArray *preSectionArr = dict[@"assets"];
