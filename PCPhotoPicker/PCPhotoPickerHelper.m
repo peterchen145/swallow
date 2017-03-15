@@ -49,17 +49,7 @@
     PHFetchResult *albums = [PHAssetCollection fetchAssetCollectionsWithType:PHAssetCollectionTypeAlbum
                                                                      subtype:PHAssetCollectionSubtypeAlbumRegular| PHAssetCollectionSubtypeAlbumSyncedAlbum
                                                                      options:nil];
-//    for (PHAssetCollection *collection in albums) {
-//        PHFetchResult *fetchResult = [PHAsset fetchAssetsInAssetCollection:collection options:option];
-//        if (fetchResult.count < 1) {
-//            continue;
-//        }
-//        if ([collection.localizedTitle isEqualToString:@"My Photo Stream"]) {
-//            [albumArr insertObject:[PCAlbumModel albumWithFetchResult:fetchResult name:collection.localizedTitle collection:collection] atIndex:1];
-//        }else{
-//            [albumArr addObject:[PCAlbumModel albumWithFetchResult:fetchResult name:collection.localizedTitle collection:collection]];
-//        }
-//    }
+
     
     // 列出所有用户创建的相册
     PHFetchResult *topLevelUserCollections = [PHCollectionList fetchTopLevelUserCollectionsWithOptions:nil];
@@ -96,41 +86,12 @@
 - (NSArray *)assetsFromAlbum:(PHFetchResult *)album{
     NSMutableArray *photoArr = [[NSMutableArray alloc]init];
     for (PHAsset *asset in album) {
-//        NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
-//        formatter.dateFormat = @"yyyy-MM-dd";
-//        NSString *date = [formatter stringFromDate:asset.modificationDate];
-//        NSLog(@"date:%@",date);
         PCAssetType type = [self assetTypeWithOriginType:asset.mediaType];
         [photoArr addObject:[PCAssetModel modelWithAsset:asset type:type]];
     }
     
     
-//    for (int i = 0; i < album.count; i++) {
-//        NSMutableArray *assetArr = [[NSMutableArray alloc]init];
-//        PHAsset *asset = album[i];
-//        NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
-//        formatter.dateFormat = @"yyyy-MM-dd";
-//        NSString *date = [formatter stringFromDate:asset.modificationDate];
-//        PCAssetType type = [self assetTypeWithOriginType:asset.mediaType];
-//        [assetArr addObject:[PCAssetModel modelWithAsset:asset type:type]];
-//        
-//        NSDictionary *dict = @{@"date":date,@"assets":assetArr};
-//        [photoArr addObject:dict];
-//        
-//        for (int j = i+1; j < album.count; j++) {
-//            PHAsset *nextAsset = album[j];
-//            NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
-//            formatter.dateFormat = @"yyyy-MM-dd";
-//            NSString *nextDate = [formatter stringFromDate:nextAsset.modificationDate];
-//            if ([nextDate isEqualToString:date] ) {
-//                
-//            }
-//        }
-//        
-//        
-//        
-//        
-//    }
+
     
     NSSortDescriptor *sortDescriptor = [[NSSortDescriptor alloc]initWithKey:@"modificationDate" ascending:YES];
     [photoArr sortUsingDescriptors:@[sortDescriptor]];

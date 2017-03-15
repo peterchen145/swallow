@@ -21,8 +21,11 @@
 @interface ScrollBar : UIView
 
 @property (strong, nonatomic) UIColor *tintColor;
+@property (strong, nonatomic) UIView *contentView;
 @property (strong, nonatomic) UIView *bar;
 @property (strong, nonatomic) UIScrollView *targetView;
+@property (strong, nonatomic) UIButton *scrollToBottomBtn;
+@property (strong, nonatomic) UIButton *scrollToTopBtn;
 @property (weak, nonatomic) id<ScrollBarDelegate> delegate;
 @property (assign, nonatomic) BOOL scrolling;
 @end
