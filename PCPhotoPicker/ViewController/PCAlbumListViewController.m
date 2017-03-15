@@ -58,11 +58,11 @@
 static  NSString *PCAlbumListCellIdentifier = @"PCAlbumListCellIdentifier";
 static NSString * const reuseIdentifier = @"Cell";
 NSString *headerIdentifier = @"collectionHeader";
-const NSInteger numberPerLine = 4; //每行的图片cell的个数
+const NSInteger numberPerLine = 3; //每行的图片cell的个数
 const CGFloat scrollBarWidth = 30;
 const CGFloat collectionHeaderHeight = 30;
-const CGFloat minLineSpacing = 1;
-const CGFloat minInterItemSpacing = 1; //item之间的距离
+const CGFloat minLineSpacing = 20;
+const CGFloat minInterItemSpacing = 10; //item之间的距离
 
 #define  kXMNMargin  1
 #define  cellWidth  ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin
@@ -610,6 +610,8 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         //  如果这时currentindexpath还是空，就设此值
         currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
     }
+    
+    
     //说明滑到了一个cell上
     if (currentIndexPath.section == preIndexPath.section) {
         //同一个section的情况
@@ -885,8 +887,9 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                 currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
             }
         }else {
+            
             if (currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height ) {
-               
+//               NSLog(@"diu");
                 //向下滑
                 //判断precell是不是在最后一行
                 NSDictionary *dict = _assets[preIndexPath.section  ];
@@ -930,6 +933,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                 }
             }
             else if(currentLocation.y < preCell.frame.origin.y){
+                
                 //向上滑
                 //判断precell是不是在该section的 第一行上
                 
@@ -970,7 +974,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                 }
             }
             else{
-//                NSLog(@"shei");
+                
                 currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
             }
         }
@@ -979,7 +983,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         //  如果这时currentindexpath还是空，就设此值
         currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
     }
-//    NSLog(@"row:%ld   pre index:%@",currentIndexPath.row,preIndexPath);
+//    NSLog(@"row:%@   pre index:%@",currentIndexPath,preIndexPath);
     //滑到一个cell上
     if (currentIndexPath.section == preIndexPath.section) {
         if (currentIndexPath.section == _originCell.indexPath.section) {
@@ -1386,29 +1390,32 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 
 - (void)currentLocationDidChange:(CGPoint)currentLocation{
-    //先按起始点的x坐标分为左右两边 右边的处于第一象限 和第四象限 左边的处于第二象限和第三象限
-    if (currentLocation.x >= _originLocation.x ) {
-        //如果y坐标大于起始cell的y坐标，处于第四象限,否则，处于第一象限（注意不是起始y坐标，因为起始的y坐标是大于起始cell的y坐标的，即使比起始y坐标小也有可能处于第四象限， ）
-        if (currentLocation.y >= _originCell.frame.origin.y ) {
-            //                    NSLog(@"forth");
-            
-//            [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
-            [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
-        }else if(currentLocation.y < _originCell.frame.origin.y - minLineSpacing  && currentLocation.y > 0){
-//            [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
-            [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+    if (_originCell && _selectedIndexPathesForAssets.count > 0) {
+        //先按起始点的x坐标分为左右两边 右边的处于第一象限 和第四象限 左边的处于第二象限和第三象限
+        if (currentLocation.x >= _originLocation.x ) {
+            //如果y坐标大于起始cell的y坐标，处于第四象限,否则，处于第一象限（注意不是起始y坐标，因为起始的y坐标是大于起始cell的y坐标的，即使比起始y坐标小也有可能处于第四象限， ）
+            if (currentLocation.y >= _originCell.frame.origin.y ) {
+                //                    NSLog(@"forth");
+                
+                //            [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
+                [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
+            }else if(currentLocation.y < _originCell.frame.origin.y - minLineSpacing  && currentLocation.y > 0){
+                [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
+                //            [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+            }
+        }
+        else if (currentLocation.x < _originLocation.x  ){
+            //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
+            if (currentLocation.y >= _originCell.frame.origin.y + _originCell.frame.size.height) {
+                [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
+            }else if(currentLocation.y > 0){
+                [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+                
+            }
         }
     }
-    else if (currentLocation.x < _originLocation.x  ){
-        //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
-        if (currentLocation.y >= _originCell.frame.origin.y + _originCell.frame.size.height) {
-            [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
-        }else if(currentLocation.y > 0){
-            [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
-            
-        }
     }
-}
+
 
 //开始选择图片时的手势操作
 - (void)handlerForPanWhenSelectionBegin:(UIPanGestureRecognizer *)pan{
@@ -1419,6 +1426,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         _originLocation = [pan locationInView:self.collectionView];
         NSIndexPath *originIndexPath = [_collectionView indexPathForItemAtPoint:_originLocation];
         _originCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:originIndexPath];
+        
         if (_originCell ) {
             if (![Tool cellIsSelected:_originCell inArrary:_selectedIndexPathesForAssets]) {
                 _doneSelection = NO;
@@ -1433,6 +1441,10 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             }
         }
     }else{
+        if (_originCell) {
+            _originCell = nil;
+        }
+        
         //如果滑动的位置位于item cell的中间地带，则indexpath.row会返回0，但是此时未必选中row为0的item，所以要做个判断，
         return;
     }
