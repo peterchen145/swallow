@@ -36,5 +36,7 @@
 
 
 
-+(void)autoAddVisibleItemsWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView;
++(void)autoAddVisibleItemsForMoveUpWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath;
+
++ (void)autoAddVisibleItemsForMoveDownWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath;
 @end

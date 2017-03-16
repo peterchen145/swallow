@@ -106,7 +106,44 @@
 
 
 //自动加入可见的cell的indexpath
-+(void)autoAddVisibleItemsWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView{
++(void)autoAddVisibleItemsForMoveUpWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath{
+    NSMutableArray *arr = [array lastObject];
+    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
+    
+    NSMutableArray *items = collectionView.indexPathsForVisibleItems.mutableCopy;
+    //把可见的cell的indexpath进行排序
+    [items sortUsingComparator:^NSComparisonResult(NSIndexPath * obj1, NSIndexPath * obj2) {
+        return [obj1 compare:obj2];
+    }];
+    
+    for (NSInteger i = items.count - 1; i >= 0; i--) {
+        NSIndexPath *index = items[i];
+        if (index.section < originIndexPath.section ) {
+            if (index.section == preIndexPath.section && index.row < preIndexPath.row) {
+                [Tool addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+            }else if (index.section < preIndexPath.section){
+                [Tool addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+            }
+        }else if (index.section == originIndexPath.section){
+            if (index.row < originIndexPath.row) {
+                if (index.row < preIndexPath.row) {
+                    [Tool addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+                }
+            }else if (index.row > originIndexPath.row){
+                
+                [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:collectionView fromArray:array];
+//                NSLog(@"row:%ld  orirow:%ld   arr:%@",index.row,originIndexPath.row,array);
+            }
+            
+        }
+        else{
+            [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:collectionView fromArray:array];
+        }
+        
+    }
+}
+
++ (void)autoAddVisibleItemsForMoveDownWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath{
     NSMutableArray *arr = [array lastObject];
     NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
     
@@ -117,13 +154,14 @@
     }];
     for (NSInteger i = 0; i < items.count; i++) {
         NSIndexPath *index = items[i];
-        if (index.section == preIndexPath.section && index.row > preIndexPath.row) {
-            [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
-        }else if (index.section > preIndexPath.section){
-            [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+        if (index.section >= originIndexPath.section ) {
+            if (index.section == preIndexPath.section && index.row > preIndexPath.row) {
+                [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+            }else if (index.section > preIndexPath.section){
+                [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+            }
         }
     }
 }
-
 
 @end

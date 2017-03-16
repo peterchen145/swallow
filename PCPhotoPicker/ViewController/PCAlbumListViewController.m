@@ -37,7 +37,8 @@
 @property (strong, nonatomic) UIButton *editBtn;
 @property (strong, nonatomic) NSTimer *timer;
 @property (strong, nonatomic) PCAssetCell *originCell;
-//@property (assign, nonatomic) CGFloat originCellY;//originCell 的y坐标
+@property (strong, nonatomic) NSIndexPath *originIndexPath;
+@property (assign, nonatomic) CGFloat originCellY;//originCell 的y坐标
 @property (assign, nonatomic) BOOL doneSelection;//选择过程结束
 
 @property (strong, nonatomic) NSString *nAlbumTitle;
@@ -58,14 +59,14 @@
 static  NSString *PCAlbumListCellIdentifier = @"PCAlbumListCellIdentifier";
 static NSString * const reuseIdentifier = @"Cell";
 NSString *headerIdentifier = @"collectionHeader";
-const NSInteger numberPerLine = 3; //每行的图片cell的个数
+const NSInteger numberPerLine = 4; //每行的图片cell的个数
 const CGFloat scrollBarWidth = 30;
 const CGFloat collectionHeaderHeight = 30;
-const CGFloat minLineSpacing = 20;
-const CGFloat minInterItemSpacing = 10; //item之间的距离
+const CGFloat minLineSpacing = 1;
+const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 #define  kXMNMargin  1
-#define  cellWidth  ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin
+#define  cellWidth  ([UIScreen mainScreen].bounds.size.width * 2/3 - scrollBarWidth) / numberPerLine - kXMNMargin
 
 @implementation PCAlbumListViewController
 
@@ -126,7 +127,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 - (void)setUpCollectionView{
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
     //宽度为其他值行不行？
-    CGFloat width = ([UIScreen mainScreen].bounds.size.width * 2/ 3 - scrollBarWidth) / 4 - kXMNMargin;
+    CGFloat width = ([UIScreen mainScreen].bounds.size.width * 2/ 3 - scrollBarWidth) / numberPerLine - kXMNMargin;
     
     layout.itemSize = CGSizeMake(cellWidth,cellWidth);
     layout.minimumInteritemSpacing = minInterItemSpacing;
@@ -610,8 +611,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         //  如果这时currentindexpath还是空，就设此值
         currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
     }
-    
-    
     //说明滑到了一个cell上
     if (currentIndexPath.section == preIndexPath.section) {
         //同一个section的情况
@@ -869,11 +868,10 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
 - (void)handlerForThirdQuadrantWithCurrentLocation:(CGPoint)currentLocation{
 
     NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    
     NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
-    
     NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
     NSInteger preRow = preIndexPath.row;
+    
     PCAssetCell *preCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:preIndexPath];
     
     if (!currentIndexPath) {
@@ -983,17 +981,18 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         //  如果这时currentindexpath还是空，就设此值
         currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
     }
+//    NSLog(@"curindex:%@  preindex:%@",currentIndexPath,preIndexPath);
 //    NSLog(@"row:%@   pre index:%@",currentIndexPath,preIndexPath);
     //滑到一个cell上
     if (currentIndexPath.section == preIndexPath.section) {
-        if (currentIndexPath.section == _originCell.indexPath.section) {
-            if (preIndexPath.row <= _originCell.indexPath.row) {
+        if (currentIndexPath.section == _originIndexPath.section) {
+            if (preIndexPath.row <= _originIndexPath.row) {
                 //从第二象限进入
-                for (NSInteger i = preIndexPath.row; i <_originCell.indexPath.row; i++) {
+                for (NSInteger i = preIndexPath.row; i <_originIndexPath.row; i++) {
                     [Tool removeCellsInLoopWithIndex:i section:_originCell.indexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                 }
                 
-                for (NSInteger i = _originCell.indexPath.row + 1; i <= currentIndexPath.row; i++) {
+                for (NSInteger i = _originIndexPath.row + 1; i <= currentIndexPath.row; i++) {
                      [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
                 }
                 
@@ -1025,10 +1024,33 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         }
     }
     else if (currentIndexPath.section > preIndexPath.section){
-        //下部  滑到新的section
-        for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
-            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+        if (preIndexPath.section < _originIndexPath.section) {
+            //从上面滑下来
+            for (NSInteger i = preIndexPath.row ; i >= 0; i--) {
+                [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }
+            
+            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
+                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }
+            
         }
+        
+        
+        if (currentIndexPath.section > _originIndexPath.section) {
+            
+            NSDictionary *dict = _assets[_originIndexPath.section];
+            NSArray *currentSectionArr = dict[@"assets"];
+            for (NSInteger i = _originIndexPath.row + 1; i < currentSectionArr.count ; i++) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+            
+            //下部  滑到新的section
+            for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+        }
+        
     }else if (currentIndexPath.section < preIndexPath.section){
         //上滑到新的section
         for (NSInteger i = preIndexPath.row; i>= 0; i--) {
@@ -1177,14 +1199,14 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     }
     //滑到一个cell上
     if (currentIndexPath.section == preIndexPath.section) {
-        if (currentIndexPath.section == _originCell.indexPath.section) {
+        if (currentIndexPath.section == _originIndexPath.section) {
             //跟原始cell在一个section
-            if (preIndexPath.row >= _originCell.indexPath.row) {
+            if (preIndexPath.row >= _originIndexPath.row) {
                 //从第三象限进入
-                for (NSInteger i = preIndexPath.row; i>_originCell.indexPath.row; i--) {
+                for (NSInteger i = preIndexPath.row; i>_originIndexPath.row; i--) {
                     [Tool removeCellsInLoopWithIndex:i section:_originCell.indexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                 }
-                for (NSInteger i = _originCell.indexPath.row - 1; i >= currentIndexPath.row; i--) {
+                for (NSInteger i = _originIndexPath.row - 1; i >= currentIndexPath.row; i--) {
                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
                 }
             }else{
@@ -1211,13 +1233,59 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
             }
         }
     }else if (currentIndexPath.section < preIndexPath.section){
-        //从headerview进入一个新的section
-        NSDictionary *dict = _assets[preIndexPath.section - 1];
-        NSArray *currentSectionArr = dict[@"assets"];
-        
-        for (NSInteger i = currentSectionArr.count - 1; i>=currentIndexPath.row; i--) {
-            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section - 1 array:_selectedIndexPathesForAssets];
+        if (preIndexPath.section > _originIndexPath.section) {
+            for (NSInteger i = preIndexPath.row; i >= 0; i--) {
+                 [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }
+           
+            NSDictionary *dict = _assets[_originIndexPath.section];
+            NSArray *currentSectionArr = dict[@"assets"];
+            
+            for (NSInteger i = currentSectionArr.count - 1; i>_originIndexPath.row; i--) {
+                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }
+            
+            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+        }else if (preIndexPath.section < _originIndexPath.section){
+            NSDictionary *dict = _assets[preIndexPath.section ];
+            NSArray *currentSectionArr = dict[@"assets"];
+            
+            for (NSInteger i = currentSectionArr.count - 1; i>=0; i--) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section  array:_selectedIndexPathesForAssets];
+            }
+        }else if (preIndexPath.section == _originIndexPath.section){
+            NSDictionary *dict = _assets[preIndexPath.section ];
+            NSArray *currentSectionArr = dict[@"assets"];
+            
+            for (NSInteger i = currentSectionArr.count - 1; i>_originIndexPath.row; i--) {
+                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }
+            
+            for (NSInteger i = _originIndexPath.row - 1; i>= 0; i--) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section  array:_selectedIndexPathesForAssets];
+            }
         }
+        
+        
+        
+        if (currentIndexPath.section < _originIndexPath.section) {
+            
+            for (NSInteger i = _originIndexPath.row - 1; i>= 0; i--) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section  array:_selectedIndexPathesForAssets];
+            }
+            
+            
+            //从headerview进入一个新的section
+            NSDictionary *dict = _assets[preIndexPath.section - 1];
+            NSArray *currentSectionArr = dict[@"assets"];
+            
+            for (NSInteger i = currentSectionArr.count - 1; i>=currentIndexPath.row; i--) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section - 1 array:_selectedIndexPathesForAssets];
+            }
+        }
+        
     }else if(currentIndexPath.section > preIndexPath.section){
         //下滑到新的section
         NSDictionary *dict = _assets[preIndexPath.section];
@@ -1238,8 +1306,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     
     if (_selectedIndexPathesForAssets.count > 0) {
         for (NSArray *arr in _selectedIndexPathesForAssets) {
-            
-           
             for ( int i = 0; i < arr.count ; i++) {
                 NSIndexPath *index = arr[i];
                 PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
@@ -1256,7 +1322,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                     [_selectedImgViewArr addObject:imgV];
                     [self.view addSubview:imgV];
                 }
-                
             }
         }
     }
@@ -1271,9 +1336,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                          animations:^{
                              imgV.center = CGPointMake(point.x + i*2, point.y + i*2);
                          }];
-        
     }
-    
     
     if (point.x < _collectionView.frame.origin.x) {
         //进入到左边相册区域
@@ -1289,7 +1352,6 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         [cell setSelected:YES];
         
         CGPoint point = [pan locationInView:self.view];
-        
         if (point.y > _collectionView.frame.origin.y + _collectionView.frame.size.height  ){
             _tableViewMoveUp = NO;
             [self tableViewStartScroll];
@@ -1302,13 +1364,11 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                 [_timer invalidate];
             }
         }
-
     }else{
         if (_timer) {
             [_timer invalidate];
         }
     }
-    
 }
 
 //选择结束，开始拖动，pan手势结束的情况
@@ -1334,40 +1394,32 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                 }
                 
                 PHAsset * asset = assetModel.asset;
-                
                 if (asset) {
                     NSError *err = nil;
                     [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
                         PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
                         [request insertAssets:@[asset] atIndexes:[NSIndexSet indexSetWithIndex:0]];
                     } error:&err];
-                    
                     if (!err) {
                         NSLog(@"success savedd");
                         //                    _selectedImgV.hidden = YES;
-                        
                     }else{
                         NSLog(@"save fail");
                     }
                 }
-               
             }
         }
-        
         for (UIImageView *imgV in _selectedImgViewArr) {
             imgV.hidden = YES;
         }
         
-        
         [_selectedImgViewArr removeAllObjects];
         _albums = [[PCPhotoPickerHelper sharedPhotoPickerHelper] getAlbums];
-        
         [self.tableView reloadData];
         [_tableView selectRowAtIndexPath:indexPath animated:NO scrollPosition:UITableViewScrollPositionNone];
         model = _albums[indexPath.row];
         _assets = [[PCPhotoPickerHelper sharedPhotoPickerHelper] assetsFromAlbum:model.fetchResult];
         [_collectionView reloadData];
-        
         [_selectedIndexPathesForAssets removeAllObjects];
     }else{
         for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
@@ -1381,10 +1433,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         for (UIImageView *imgV in _selectedImgViewArr) {
             imgV.hidden = YES;
         }
-        
         [_selectedImgViewArr removeAllObjects];
-        
-        
     }
 }
 
@@ -1394,27 +1443,30 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         //先按起始点的x坐标分为左右两边 右边的处于第一象限 和第四象限 左边的处于第二象限和第三象限
         if (currentLocation.x >= _originLocation.x ) {
             //如果y坐标大于起始cell的y坐标，处于第四象限,否则，处于第一象限（注意不是起始y坐标，因为起始的y坐标是大于起始cell的y坐标的，即使比起始y坐标小也有可能处于第四象限， ）
-            if (currentLocation.y >= _originCell.frame.origin.y ) {
+            if (currentLocation.y >= _originCellY ) {
                 //                    NSLog(@"forth");
                 
-                //            [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
+//                [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
+//                [self handlerForDownAreaWithCurrentLocation:currentLocation];
                 [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
-            }else if(currentLocation.y < _originCell.frame.origin.y - minLineSpacing  && currentLocation.y > 0){
-                [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
-                //            [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+            }else if(currentLocation.y < _originCellY - minLineSpacing  && currentLocation.y > 0){
+//                [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
+//                            [self handlerForUperAreaWithCurrentLocation:currentLocation];
+                 [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
             }
         }
         else if (currentLocation.x < _originLocation.x  ){
             //如果y坐标大于起始cell的y+cell的高度，则位于第三象限，否则，位于第二象限
-            if (currentLocation.y >= _originCell.frame.origin.y + _originCell.frame.size.height) {
+            if (currentLocation.y >= _originCellY + cellWidth) {
+//                [self handlerForDownAreaWithCurrentLocation:currentLocation];
                 [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
             }else if(currentLocation.y > 0){
-                [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
-                
+//                [self handlerForUperAreaWithCurrentLocation:currentLocation];
+                 [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
             }
         }
     }
-    }
+}
 
 
 //开始选择图片时的手势操作
@@ -1424,16 +1476,18 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
     
     if (currentIndexPath) {
         _originLocation = [pan locationInView:self.collectionView];
-        NSIndexPath *originIndexPath = [_collectionView indexPathForItemAtPoint:_originLocation];
-        _originCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:originIndexPath];
+        _originIndexPath = [_collectionView indexPathForItemAtPoint:_originLocation];
+        _originCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:_originIndexPath];
         
         if (_originCell ) {
+            
             if (![Tool cellIsSelected:_originCell inArrary:_selectedIndexPathesForAssets]) {
                 _doneSelection = NO;
                 NSMutableArray *currentSelectedArr = [[NSMutableArray alloc]init];
-                [currentSelectedArr addObject:originIndexPath];
+                [currentSelectedArr addObject:_originIndexPath];
                 _originCell.stateBtnSelected = YES;
                 [_selectedIndexPathesForAssets addObject:currentSelectedArr];
+                _originCellY = _originCell.frame.origin.y;
             }else{
                 //选择过程结束，开始拖动复制
                 _doneSelection = YES;
@@ -1444,7 +1498,10 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
         if (_originCell) {
             _originCell = nil;
         }
-        
+        if (_originIndexPath) {
+            _originIndexPath = nil;
+        }
+        _originCellY = 0;
         //如果滑动的位置位于item cell的中间地带，则indexpath.row会返回0，但是此时未必选中row为0的item，所以要做个判断，
         return;
     }
@@ -1516,9 +1573,8 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                                                           _rolling = YES;
                                                           if (_collectionView.contentOffset.y > 0) {
                                                               [_collectionView setContentOffset:CGPointMake(_collectionView.contentOffset.x, yOffset)];
-                                                              
-                                                              [Tool autoAddVisibleItemsWithArray:_selectedIndexPathesForAssets collectionView:_collectionView];
-                                                              
+                                                              [Tool autoAddVisibleItemsForMoveUpWithArray:_selectedIndexPathesForAssets collectionView:_collectionView originIndexPath:_originIndexPath];
+                                                             
                                                           }
 
                                                       }else{
@@ -1526,7 +1582,7 @@ const CGFloat minInterItemSpacing = 10; //item之间的距离
                                                           if (_collectionView.contentOffset.y + _collectionView.frame.size.height < _collectionView.contentSize.height) {
                                                               [_collectionView setContentOffset:CGPointMake(_collectionView.contentOffset.x, yOffset)];
                                                               _rolling = YES;
-                                                              [Tool autoAddVisibleItemsWithArray:_selectedIndexPathesForAssets collectionView:_collectionView];
+                                                              [Tool autoAddVisibleItemsForMoveDownWithArray:_selectedIndexPathesForAssets collectionView:_collectionView originIndexPath:_originIndexPath];
                                                               
                                                           }
                                                           
