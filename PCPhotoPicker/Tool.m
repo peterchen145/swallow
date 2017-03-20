@@ -15,13 +15,13 @@
 
 //判断当前cell是否已经被选中
 + (BOOL)cellIsSelected:(PCAssetCell *)cell inArrary:(NSArray *)array{
-    for (NSMutableArray *arr in array) {
-        for (NSIndexPath *ind in arr) {
+//    for (NSMutableArray *arr in array) {
+        for (NSIndexPath *ind in array) {
             if (ind.section == cell.indexPath.section && ind.row == cell.indexPath.row) {
                 return YES;
             }
         }
-    }
+//    }
     return NO;
 }
 
@@ -43,14 +43,14 @@
     
     
     if (cell && ![self cellIsSelected:cell inArrary:array]) {
-        NSMutableArray *arr = [array lastObject];
-        if (!arr) {
-            arr = [[NSMutableArray alloc]init];
-            [array addObject:arr];
-        }
+//        NSMutableArray *arr = [array lastObject];
+//        if (!arr) {
+//            arr = [[NSMutableArray alloc]init];
+//            [array addObject:ind];
+//        }
         
         cell.stateBtnSelected = YES;
-        [arr addObject:ind];
+        [array addObject:ind];
     }
 }
 
@@ -88,18 +88,18 @@
 + (void)removeSingleCell:(PCAssetCell *)cell fromArray:(NSMutableArray *)array{
     
     for (int i = 0 ; i<array.count; i++) {
-        NSMutableArray *arr = array[i];
+//        NSMutableArray *arr = array[i];
         
-        for (int j = 0; j<arr.count; j++) {
-            NSIndexPath *ind = arr[j];
+//        for (int j = 0; j<arr.count; j++) {
+            NSIndexPath *ind = array[i];
             if (ind.section == cell.indexPath.section && ind.row == cell.indexPath.row) {
-                [arr removeObject:ind];
+                [array removeObject:ind];
                 cell.stateBtnSelected = NO;
             }
-        }
-        if (arr.count <= 0) {
-            [array removeObject:arr];
-        }
+//        }
+//        if (arr.count <= 0) {
+//            [array removeObject:arr];
+//        }
     }
     
 }

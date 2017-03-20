@@ -21,7 +21,8 @@
 @property (strong, nonatomic) UITableView *tableView;
 @property (strong, nonatomic) UICollectionView *collectionView;
 @property (strong, nonatomic) NSMutableArray * assets;
-
+@property (assign, nonatomic) BOOL firstTimeMove;
+@property (strong, nonatomic) NSMutableArray * preIndexArr;
 @property (assign, nonatomic) CGPoint originLocation;
 
 @property (strong, nonatomic) NSMutableArray *selectedImgViewArr;
@@ -54,6 +55,7 @@
 @property (strong, nonatomic) NSMutableArray *selectedAllForSectionArr;
 @property (strong, nonatomic) UIButton *sortBtn;
 @property (assign, nonatomic) BOOL tableDescending;//
+@property (strong, nonatomic) NSIndexPath *preMaxInd;//上一个最大的indexpath
 @end
 
 static  NSString *PCAlbumListCellIdentifier = @"PCAlbumListCellIdentifier";
@@ -87,6 +89,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     _selectedIndexPathesForAssets = [[NSMutableArray alloc]init];
     _selectedImgViewArr = [[NSMutableArray alloc]init];
     _originLocation = CGPointZero;
+    _preIndexArr = [[NSMutableArray alloc]init];
 }
 
 #pragma ui
@@ -363,23 +366,27 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     label.font = [UIFont systemFontOfSize:10];
     [cell.contentView addSubview:label];
     
-    for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
-        NSMutableArray *arr = _selectedIndexPathesForAssets[i];
-        for (NSIndexPath *ind  in arr) {
+//    for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
+//        NSMutableArray *arr = _selectedIndexPathesForAssets[i];
+        for (NSIndexPath *ind  in _selectedIndexPathesForAssets) {
             if (ind.row == indexPath.row && ind.section == indexPath.section) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     cell.stateBtnSelected = YES;
                 });
                 
+            }else{
+                cell.stateBtnSelected = NO;
             }
         }
-    }
+//    }
 
     return cell;
 }
 
 - (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
     if (kind == UICollectionElementKindSectionHeader) {
+//        NSLog(@"indexarr:%@",collectionView.indexPathsForVisibleItems);
+//        NSLog(@"index section:%ld",indexPath.section);
         PCCollectionReusableHeaderView *header = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader
                                                                               withReuseIdentifier:headerIdentifier
                                                                                      forIndexPath:indexPath];
@@ -394,906 +401,1008 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     }else{
         return nil;
     }
+    
 }
 
 
-
-
-
-//处理第四象限的情况
-
+//第四象限
 - (void)handlerForForthQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
-    NSInteger preRow = preIndexPath.row;
-    PCAssetCell *preCell = (PCAssetCell *) [_collectionView cellForItemAtIndexPath:preIndexPath];
-     CGFloat itemCellWidth = preCell.frame.size.width;
-    if (!currentIndexPath) {
-        //滑到空白地带
-        if (   currentLocation.y >= preCell.frame.origin.y && currentLocation.y < preCell.frame.origin.y + preCell.frame.size.height) {
-            //跟前一个cell在同一行，滑动到item之间的空白地带
-            if (currentLocation.x > preCell.frame.origin.x + itemCellWidth) {
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-            }else if(currentLocation.x < preCell.frame.origin.x ){
-                NSInteger row = preIndexPath.row - 1 >= 0 ? preIndexPath.row - 1 : 0;
-                currentIndexPath = [NSIndexPath indexPathForRow:row inSection:preIndexPath.section];
+    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y);
+    NSArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect];
+    NSMutableArray *indexArr = [[NSMutableArray alloc]init];
+    for (NSInteger i = 0; i < arr.count; i++) {
+        UICollectionViewLayoutAttributes *att = arr[i];
+        [indexArr addObject:att.indexPath];
+    }
+    [indexArr sortUsingComparator:^NSComparisonResult(NSIndexPath * obj1, NSIndexPath * obj2) {
+        return [obj1 compare:obj2];
+    }];
+   
+    if (indexArr.count > 0) {
+        NSMutableArray *sectionsArr = [[NSMutableArray alloc]init];
+        NSIndexPath *index0 = indexArr[0];
+        [sectionsArr addObject:[NSNumber numberWithInteger:index0.section]];
+        for (NSInteger i = 0; i<indexArr.count; i++) {
+            NSIndexPath *ind = indexArr[i];
+            NSNumber *section = [sectionsArr lastObject];
+            if (ind.section > section.integerValue) {
+                [sectionsArr addObject:[NSNumber numberWithInteger:ind.section]];
             }
-        }else if(currentLocation.y >= preCell.frame.origin.y + preCell.frame.size.height  && currentLocation.y < preCell.frame.origin.y + preCell.frame.size.height + minLineSpacing){
-            //滑到下部 在每行的中间的空白地带  ，
-            currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-        }else if (currentLocation.y >= preCell.frame.origin.y + preCell.frame.size.height + minLineSpacing && currentLocation.y < preCell.frame.origin.y + preCell.frame.size.height + minLineSpacing + collectionHeaderHeight){
-            //滑到下一行，这分为几种情况
-            //1:滑到下面的headerview了，上一个section已经结束
-            //2:滑到最后一行，该section没有结束，此时，lastcell是存在的
-            //3:没到最后一行，lastcell已经生成的情况
-            //4:没到最后一行，lastcell还没生成的情况
             
-            NSDictionary *dict = _assets[preIndexPath.section ];
-            NSArray *preSectionArr = dict[@"assets"];
-            NSIndexPath *lastIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count-1 inSection:preIndexPath.section];
-            PCAssetCell *lastCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:lastIndexPath];
-            if (lastCell  && preCell.indexPath.row <= lastIndexPath.row  && currentLocation.y > lastCell.frame.origin.y + lastCell.frame.size.height ) {
-                
-                //判断该section是展开还是收起，收起的话要特别处理
-                NSInteger preSection = preIndexPath.section;
-                if([_stateForSectionArr[preSection + 1] isEqualToString:@"1"]){
-                    //展开
-                    //1:进入到headerview
-                    currentIndexPath = [NSIndexPath indexPathForRow:lastIndexPath.row inSection:lastIndexPath.section];
-                }
-            }else if (lastCell && currentLocation.y >= lastCell.frame.origin.y && currentLocation.y <= lastCell.frame.origin.y + lastCell.frame.size.height){
-                //2:滑到最后一行，该section没有结束，此时，lastcell是存在的
-                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                NSInteger currentRow = row * numberPerLine + low;
-                if (currentRow > lastIndexPath.row) {
-                    currentRow = lastIndexPath.row;
-                }
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:lastIndexPath.section];
-            }else if (lastCell && currentLocation.y < lastCell.frame.origin.y){
-                //3:没到最后一行，lastcell已经生成的情况
-                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                NSInteger currentRow = row * numberPerLine + low ;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:lastIndexPath.section];
-            }else if (!lastCell && preIndexPath.row < preSectionArr.count - 1){
-                //4:没到最后一行，lastcell还没生成的情况
-                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                NSInteger currentRow = row * numberPerLine + low ;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }
-        }else if(currentLocation.y >= preCell.frame.origin.y + preCell.frame.size.height + minLineSpacing + collectionHeaderHeight && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height + minLineSpacing + collectionHeaderHeight + itemCellWidth){
-            //通过headerview进入下一个section
-            //1:进入该section的右边
-            //2:进入该section的item的中间空白地带
-            
-            NSDictionary *dict = _assets[preIndexPath.section ];
-            NSArray *preSectionArr = dict[@"assets"];
-            NSIndexPath *lastIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count-1 inSection:preIndexPath.section];
-            PCAssetCell *lastCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:lastIndexPath];
-            if ( currentLocation.y >= lastCell.frame.origin.y + lastCell.frame.size.height) {
-                //超过上个section的最后一个cell，才是进入下一个section
-                
-                NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section + 1];
-                PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-                
-                CGFloat firstCellX = firstCell.frame.origin.x;
-                NSInteger currentRow = floor( (currentLocation.x - firstCellX) / (itemCellWidth + _realItemInterSpace));
-                
-                if (_assets.count > preIndexPath.section + 1) {
-                    NSDictionary *dict = _assets[preIndexPath.section + 1];
-                    NSArray *currentSectionArr = dict[@"assets"];
-                    if (currentRow > currentSectionArr.count - 1) {
-                        currentRow = currentSectionArr.count - 1;
-                    }
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section + 1];
-                }
-                
-            }else{
-                
-                if (lastCell  && preCell.indexPath.row <= lastIndexPath.row  && currentLocation.y > lastCell.frame.origin.y + lastCell.frame.size.height ) {
-                    //1:进入到headerview
-                    currentIndexPath = [NSIndexPath indexPathForRow:lastIndexPath.row inSection:lastIndexPath.section];
-                    
-                }else if (lastCell && currentLocation.y >= lastCell.frame.origin.y && currentLocation.y < lastCell.frame.origin.y + lastCell.frame.size.height){
-                    //2:滑到最后一行，该section没有结束，此时，lastcell是存在的
-                    NSInteger currentRow = preIndexPath.row + numberPerLine;
-                    if (currentRow > lastIndexPath.row) {
-                        currentRow = lastIndexPath.row;
-                    }
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:lastIndexPath.section];
-                }else if (lastCell && currentLocation.y < lastCell.frame.origin.y){
-                    //3:没到最后一行，lastcell已经生成的情况
-                    NSInteger currentRow = preIndexPath.row + numberPerLine;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:lastIndexPath.section];
-                }else if (!lastCell && preIndexPath.row < preSectionArr.count - 1){
-                    //4:没到最后一行，lastcell还没生成的情况
-                    NSInteger currentRow = preIndexPath.row + numberPerLine;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }
-        }else if (currentLocation.y <= preCell.frame.origin.y  && currentLocation.y > preCell.frame.origin.y - minLineSpacing){
-            //向上滑 在每行的中间的空白地带  ，
-             currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-        }else if (currentLocation.y <= preCell.frame.origin.y- minLineSpacing  && currentLocation.y > preCell.frame.origin.y - minLineSpacing - collectionHeaderHeight){
-            //1:滑到上面的headerview了，上一个section已经结束
-            //2:滑到最后一行，该section没有结束，此时，firstCell是存在的
-            //3:没到最后一行，firstCell已经生成的情况
-            //4:没到最后一行，firstCell还没生成的情况
-            NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section];
-            PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-            if(firstCell && preIndexPath.row >= firstIndexPath.row && currentLocation.y < firstCell.frame.origin.y){
-                //1:滑到上面的headerview了，上一个section已经结束
-                            NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                            NSArray *preSectionArr = dict[@"assets"];
-                currentIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count - 1 inSection:preIndexPath.section - 1];
-            }else if(firstCell && currentLocation.y >= firstCell.frame.origin.y && currentLocation.y < firstCell.frame.origin.y + firstCell.frame.size.height){
-                //2:滑到最后一行，该section没有结束，此时，firstCell是存在的
-                NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section + 1];
-                PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-                CGFloat firstCellX = firstCell.frame.origin.x;
-                NSInteger currentRow = floor( (currentLocation.x - firstCellX) / (itemCellWidth + _realItemInterSpace));
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }else if(firstCell && currentLocation.y >= firstCell.frame.origin.y + firstCell.frame.size.height){
-               // 3:没到最后一行，firstCell已经生成的情况
-                NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-                CGFloat firstCellY = firstCell.frame.origin.y;
-                CGFloat firstCellX = firstCell.frame.origin.x;
-                CGFloat  row =  floor((currentLocation.y - firstCellY) / (itemCellWidth + minLineSpacing)) ;
-                CGFloat  low = floor( (currentLocation.x - firstCellX) / (itemCellWidth + _realItemInterSpace)) ;
-                NSInteger currentRow = row * numberPerLine + low;
-                 currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }else if (!firstCell ){
-                //4:没到最后一行，firstCell还没生成的情况
-                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                CGFloat row = (preIndexPath.row /numberPerLine ) - 1;
-                NSInteger currentRow = row * numberPerLine + low;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }
-        }else if(currentLocation.y <= preCell.frame.origin.y - minLineSpacing - collectionHeaderHeight && currentLocation.y >= preCell.frame.origin.y - minLineSpacing - collectionHeaderHeight - itemCellWidth){
-            //透过headerview进入上一个section
-            //1:进入该section的右边
-            //2:进入该section的item的中间空白地带
-            NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-            PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-            if (firstCell &&  currentLocation.y < firstCell.frame.origin.y ) {
-                //只有小于前一个section的第一个cell的y坐标时，才是真正的进入到上一个section
-                
-                NSInteger currentRow = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace));
-                
-                NSDictionary *dict = _assets[preIndexPath.section - 1];
-                NSArray *currentSectionArr = dict[@"assets"];
-                if (currentRow > currentSectionArr.count - 1) {
-                    currentRow = currentSectionArr.count - 1;
-                }
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-            }else{
-                if(firstCell && preIndexPath.row >= firstIndexPath.row && currentLocation.y < firstCell.frame.origin.y){
-                    //1:滑到上面的headerview了，上一个section已经结束
-                    NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                    NSArray *preSectionArr = dict[@"assets"];
-                    currentIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count - 1 inSection:preIndexPath.section - 1];
-                }else if(firstCell && currentLocation.y >= firstCell.frame.origin.y && currentLocation.y < firstCell.frame.origin.y + firstCell.frame.size.height){
-                    //2:滑到最后一行，该section没有结束，此时，firstCell是存在的
-                    NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section + 1];
-                    PCAssetCell *firstCell =(PCAssetCell *) [_collectionView cellForItemAtIndexPath:firstIndexPath];
-                    CGFloat firstCellX = firstCell.frame.origin.x;
-                    NSInteger currentRow = floor( (currentLocation.x - firstCellX) / (itemCellWidth + _realItemInterSpace));
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                    //                NSLog(@"2");
-                }else if(firstCell && currentLocation.y >= firstCell.frame.origin.y + firstCell.frame.size.height){
-                    // 3:没到最后一行，firstCell已经生成的情况
-                    NSIndexPath *firstIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                    PCAssetCell *firstCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:firstIndexPath];
-                    CGFloat firstCellY = firstCell.frame.origin.y;
-                    CGFloat firstCellX = firstCell.frame.origin.x;
-                    CGFloat  row =  floor((currentLocation.y - firstCellY) / (itemCellWidth + minLineSpacing)) ;
-                    CGFloat  low = floor( (currentLocation.x - firstCellX) / (itemCellWidth + _realItemInterSpace)) ;
-                    NSInteger currentRow = row * numberPerLine + low;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }else if (!firstCell ){
-                    //4:没到最后一行，firstCell还没生成的情况
-                    CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (preIndexPath.row /numberPerLine ) - 1;
-                    NSInteger currentRow = row * numberPerLine + low;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }
-        }else{
-            
-            currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
         }
-    }
-    if(!currentIndexPath){
-        //  如果这时currentindexpath还是空，就设此值
-        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-    }
-    //说明滑到了一个cell上
-    if (currentIndexPath.section == preIndexPath.section) {
-        //同一个section的情况
-        if (currentIndexPath.section == _originCell.indexPath.section) {
-            if (preIndexPath.row < _originCell.indexPath.row) {
-                //从第一象限进入第四象限
-                for (NSInteger i = preIndexPath.row; i <_originCell.indexPath.row; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                for (NSInteger i = _originCell.indexPath.row+ 1; i<= currentIndexPath.row; i++) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-            }else{
-                //原始section的普通情况
-                if (currentIndexPath.row > preRow) {
-                    for (NSInteger i = preRow + 1; i <= currentIndexPath.row ; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }else if(currentIndexPath.row < preRow){
-                    for (NSInteger i = preRow; i > currentIndexPath.row; i--) {
-                         [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                }
-            }
-        }else{
-            //不是原始section的情况
-            if (currentIndexPath.row > preRow) {
-                for (NSInteger i = preRow + 1; i <= currentIndexPath.row ; i++) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-            }else if(currentIndexPath.row < preRow){
-                for (NSInteger i = preRow; i > currentIndexPath.row; i--) {
-                    [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-            }
-        }
-    }else if (currentIndexPath.section > preIndexPath.section){
-        //下部  滑到新的section
-        for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
-             [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-        }
-    }else if (currentIndexPath.section < preIndexPath.section){
-        //上滑到新的section
-        for (NSInteger i = preIndexPath.row; i>= 0; i--) {
-             [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-    }
-}
+        
+//        NSLog(@"indexarr:%@",indexArr);
+//        if (sectionsArr.count > 0) {
+//                NSIndexPath *maxIndex = indexArr.lastObject;
+////                if (maxIndex.section > _originIndexPath.section) {
+//            
+//                    if (maxIndex.section > _preMaxInd.section) {
+//                        //下滑到新的section
+//                        NSIndexPath *minIndex = indexArr.firstObject;
+//                        
+//                        if (minIndex.section == _originIndexPath.section ) {
+//                            //把初始section都选完
+//                            NSDictionary *dict = _assets[_originIndexPath.section  ];
+//                            NSArray *originSectionArr = dict[@"assets"];
+//                            for (NSInteger i = _originIndexPath.row + 1; i < originSectionArr.count; i++) {
+//                                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+//                            }
+//                        }
+//                        
+//                        
+//                        //把中间的几个section都选上
+//                        for (NSInteger i = minIndex.section + 1; i < maxIndex.section; i++) {
+//                            
+//                            NSDictionary *dict = _assets[i];
+//                            NSArray *nextSectionArr = dict[@"assets"];
+//                            for (NSInteger j = 0; j < nextSectionArr.count; j++) {
+//                                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:j section:i array:_selectedIndexPathesForAssets];
+//                            }
+//                        }
+//                        
+//                        
+//                        //最大的那个section
+//                        for (NSInteger i = 0; i <= maxIndex.row; i++) {
+////                            NSLog(@"i:%ld",i);
+//                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:maxIndex.section array:_selectedIndexPathesForAssets];
+//                        }
+//
+//                    }else if (maxIndex.section == _preMaxInd.section){
+//                        
+//                        //在同一个section
+//                        if (maxIndex.row > _preMaxInd.row) {
+//                            for (NSInteger i = _preMaxInd.row; i<=maxIndex.row; i++) {
+//                                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_preMaxInd.section array:_selectedIndexPathesForAssets];
+//                            }
+//                        }else if(maxIndex.row < _preMaxInd.row) {
+//                            
+//                            for (NSInteger i = _preMaxInd.row; i > maxIndex.row; i--) {
+//                                [Tool removeCellsInLoopWithIndex:i section:maxIndex.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+//                            }
+//                        }
+//                        
+//                    }else if (maxIndex.section < _preMaxInd.section){
+//                        //上滑到新的section
+//                        for (NSInteger i = _preMaxInd.row; i >= 0; i--) {
+//                            [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+//                        }
+//                    }
+//                    _preMaxInd = maxIndex;
+//        }
+   
 
-
-
-//第一象限的情况
-
-- (void)handlerForFirstQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-    CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
-    
-    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    
-    NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
-    
-    PCAssetCell *preCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:preIndexPath];
-    
-    if (!currentIndexPath) {
-        //空白地带
-        if (currentLocation.y >preCell.frame.origin.y && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height) {
-            if (currentLocation.x > preCell.frame.origin.x + preCell.frame.size.width) {
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row + 1 inSection:preIndexPath.section];
-            }else if (currentLocation.x < preCell.frame.origin.x){
-                NSInteger currentRow = preIndexPath.row > 0 ? preIndexPath.row : 0;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }
-        }else if (currentLocation.y <= preCell.frame.origin.y && currentLocation.y > preCell.frame.origin.y - minLineSpacing ){
-            currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row  inSection:preIndexPath.section];
-        }else if( currentLocation.y <= preCell.frame.origin.y- minLineSpacing  ){
-            //向上滑
-            //判断precell是不是在该section的 第一行上
-            
-            if (preIndexPath.row < numberPerLine && preIndexPath.row >= 0) {
-                if (currentLocation.y < preCell.frame.origin.y && currentLocation.y > preCell.frame.origin.y - collectionHeaderHeight) {
-                    //向上滑则进入headerview
-                    currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section];
-                    
-                }else if(currentLocation.y <= preCell.frame.origin.y - collectionHeaderHeight ){
-                    //通过headerview进入上一个section
-                    //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                    NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                    NSArray *currentSectionArr = dict[@"assets"];
-                if (currentSectionArr.count > numberPerLine) {
-                    //多于一行
-                    CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                    NSInteger currentRow = row * numberPerLine + low + 1;;
-                    if (currentRow > currentSectionArr.count - 1) {
-                        //在section的右边
-                        currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                    }else{
-                        currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                    }
-                    if (currentLocation.y < preCell.frame.origin.y - collectionHeaderHeight - itemCellWidth - minLineSpacing) {
-                        //进入倒数第二行
-                        CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (currentSectionArr.count - 1)/numberPerLine - 1 ;
-                        NSInteger currentRow = row * numberPerLine + low + 1;;
-                        currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                    }
-                }else{
-                    //只有一行
-                    CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                    NSInteger currentRow = row * numberPerLine + low + 1;;
-                    if (currentRow > currentSectionArr.count - 1) {
-                        //在section的右边
-                        currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                    }else{
-                        currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                    }
-                    if (currentLocation.y <= preCell.frame.origin.y - collectionHeaderHeight - itemCellWidth ){
-                        //再继续向上滑
-                        NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                        NSArray *currentSectionArr = dict[@"assets"];
-                        if (currentSectionArr.count < numberPerLine) {
-                            currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section - 1 ];
-                        }
-                    }
-                }
-                }
-            }else{
-                //不在第一行
-                if(currentLocation.y < preCell.frame.origin.y - minLineSpacing  && currentLocation.y >= preCell.frame.origin.y - minLineSpacing - itemCellWidth){
-                    CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (preIndexPath.row /numberPerLine ) - 1;
-                    NSInteger currentRow = row * numberPerLine + low + 1;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }
-        }else if(currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height ){
-            //向下滑
-            //判断precell在不在最后一行
-            NSDictionary *dict = _assets[preIndexPath.section  ];
-            NSArray *preSectionArr = dict[@"assets"];
-            if ((preIndexPath.row / numberPerLine)  == ((preSectionArr.count - 1 )/ numberPerLine) ) {
-                //在最后一行
-                //向下滑进入headerview
-                if (currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height + collectionHeaderHeight) {
-                    currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section + 1];
-                }else{
-                    //通过headerview进入下一个section
-                    //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                    NSDictionary *dict = _assets[preIndexPath.section + 1 ];
-                    NSArray *currentSectionArr = dict[@"assets"];
-                    if (currentSectionArr.count > numberPerLine) {
-                        //多于一行
-                        CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                        NSInteger currentRow = row * numberPerLine + low + 1;;
-                        if (currentRow > currentSectionArr.count - 1) {
-                            //在section的右边
-                            currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                        }else{
-                            currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                        }
-                    }else{
-                        //只有一行
-                        CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                        NSInteger currentRow = row * numberPerLine + low + 1;;
-                        if (currentRow > currentSectionArr.count - 1) {
-                            //在section的右边
-                            currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                        }else{
-                            currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                        }
-                    }
-                }
-            }else{
-                //不在最后一行
-                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                NSInteger currentRow = row * numberPerLine + low + 1;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }
-        }
-        else{
-            currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-        }
-    }
-    if(!currentIndexPath){
-        //  如果这时currentindexpath还是空，就设此值
-        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-    }
-//    NSLog(@"row:%@   pre index:%@",currentIndexPath,preIndexPath);
-    
-    if (currentIndexPath.section == preIndexPath.section) {
-        if (currentIndexPath.section == _originCell.indexPath.section) {
-            //跟原始cell在一个section
-            if (preIndexPath.row >= _originCell.indexPath.row) {
-                //从第四象限进入第一象限
-                //先把第四象限的删除
-                for (NSInteger i = preIndexPath.row; i>_originCell.indexPath.row; i--) {
-                     [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                
-                //再把原始cell左边的  以及第一象限的选上
-                for (NSInteger i = _originCell.indexPath.row - 1; i >= currentIndexPath.row; i--) {
-                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-                
-            }else{
-                //原始section的普通情况
-                if (currentIndexPath.row < preIndexPath.row) {
-                    for (NSInteger i = preIndexPath.row - 1; i>= currentIndexPath.row; i--) {
-                         [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }else if(currentIndexPath.row > preIndexPath.row){
-                    for (NSInteger i = preIndexPath.row; i < currentIndexPath.row; i++) {
-                        [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                }
-            }
-        }else{
-            //同一个section的情况
-            if (currentIndexPath.row < preIndexPath.row) {
-                for (NSInteger i = preIndexPath.row - 1; i>= currentIndexPath.row; i--) {
-                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-            }else if(currentIndexPath.row > preIndexPath.row){
-                for (NSInteger i = preIndexPath.row; i < currentIndexPath.row; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-            }
-        }
-    }else if(currentIndexPath.section < preIndexPath.section) {
-        //上滑到新的section
-        NSDictionary *dict = _assets[currentIndexPath.section];
-        NSArray *currentSectionArr = dict[@"assets"];
-        if (currentIndexPath.row <= currentSectionArr.count - 1) {
-            for (NSInteger i = currentSectionArr.count - 1; i >= currentIndexPath.row; i--) {
-                 [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-            }
-        }
-    }else if(currentIndexPath.section > preIndexPath.section){
-        //下滑到新的section
-        NSDictionary *dict = _assets[preIndexPath.section];
-        NSArray *currentSectionArr = dict[@"assets"];
-        for (NSInteger i = preIndexPath.row; i <= currentSectionArr.count - 1 ; i++) {
-            [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-    }
-}
-
-
-//第三象限
-
-- (void)handlerForThirdQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-
-    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
-    NSInteger preRow = preIndexPath.row;
-    
-    PCAssetCell *preCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:preIndexPath];
-    
-    if (!currentIndexPath) {
-
-        if (currentLocation.y >=preCell.frame.origin.y && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height) {
-            
-            if (currentLocation.x > preCell.frame.origin.x + preCell.frame.size.width) {
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row  inSection:preIndexPath.section];
-            }else if (currentLocation.x < preCell.frame.origin.x){
-                NSInteger currentRow = preIndexPath.row - 1> 0 ? preIndexPath.row -1  : 0;
-                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-            }
-        }else {
-            
-            if (currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height ) {
-//               NSLog(@"diu");
-                //向下滑
-                //判断precell是不是在最后一行
-                NSDictionary *dict = _assets[preIndexPath.section  ];
-                NSArray *preSectionArr = dict[@"assets"];
-                if ((preIndexPath.row / numberPerLine)  == ((preSectionArr.count - 1 )/ numberPerLine) ) {
-                 //在最后一行
-                   
-                    //向下滑进入headerview
-                    if ( currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height + collectionHeaderHeight) {
-                        currentIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count - 1 inSection:preIndexPath.section ];
-                    }else{
-                        //通过headerview进入下一个section
-                        //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                        
-                        if (_assets.count > preIndexPath.section + 1) {
-                            NSDictionary *dict = _assets[preIndexPath.section + 1 ];
-                            NSArray *currentSectionArr = dict[@"assets"];
-                            if (currentSectionArr.count > numberPerLine) {
-                                //多于一行
-                                CGFloat  currentRow = floor( (currentLocation.x - 0) / (cellWidth + _realItemInterSpace)) ;
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section + 1];
-                                
-                            }else{
-                                //只有一行
-                                CGFloat  currentRow = floor( (currentLocation.x - 0) / (cellWidth + _realItemInterSpace)) ;
-                                if (currentRow > currentSectionArr.count - 1) {
-                                    currentRow = currentSectionArr.count - 1;
-                                }
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section + 1];
-                            }
-
-                        }
-                    }
-                }else{
-                    //不在最后一行
-                    
-                    CGFloat  low = floor( (currentLocation.x - 0) / (cellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                    NSInteger currentRow = row * numberPerLine + low;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }
-            else if(currentLocation.y < preCell.frame.origin.y){
-                
-                //向上滑
-                //判断precell是不是在该section的 第一行上
-                
-                if (preIndexPath.row < numberPerLine && preIndexPath.row >= 0) {
-                    //在第一行
-                    if ( currentLocation.y > preCell.frame.origin.y - collectionHeaderHeight) {
-                        //向上滑则进入headerview
-                        NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                        NSArray *preSectionArr = dict[@"assets"];
-                        currentIndexPath = [NSIndexPath indexPathForRow:preSectionArr.count - 1 inSection:preIndexPath.section - 1];
-                        
-                    }else if(currentLocation.y <= preCell.frame.origin.y - collectionHeaderHeight ){
-                        //通过headerview进入上一个section
-                        //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                        NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                        NSArray *currentSectionArr = dict[@"assets"];
-
-                        
-                        CGFloat  low = floor( (currentLocation.x - 0) / (cellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                        NSInteger currentRow = row * numberPerLine + low + 1;;
-                        if (currentRow > currentSectionArr.count - 1) {
-                            
-                            //在section的右边
-                            currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                        }else{
-                            currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                        }
-                    }
-                }else{
-                    //不在第一行
-                    if(currentLocation.y < preCell.frame.origin.y - minLineSpacing  && currentLocation.y >= preCell.frame.origin.y - minLineSpacing - cellWidth){
-                        CGFloat  low = floor( (currentLocation.x - 0) / (cellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (preIndexPath.row /numberPerLine ) - 1;
-                        NSInteger currentRow = row * numberPerLine + low + 1;
-                        currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                    }
-                }
-            }
-            else{
-                
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-            }
-        }
-    }
-    if(!currentIndexPath){
-        //  如果这时currentindexpath还是空，就设此值
-        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-    }
-//    NSLog(@"curindex:%@  preindex:%@",currentIndexPath,preIndexPath);
-//    NSLog(@"row:%@   pre index:%@",currentIndexPath,preIndexPath);
+    NSIndexPath *currentIndexPath = indexArr.lastObject;
+    _preMaxInd = _selectedIndexPathesForAssets.lastObject;
     //滑到一个cell上
-    if (currentIndexPath.section == preIndexPath.section) {
+    if (currentIndexPath.section == _preMaxInd.section) {
+        
         if (currentIndexPath.section == _originIndexPath.section) {
-            if (preIndexPath.row <= _originIndexPath.row) {
-                //从第二象限进入
-                for (NSInteger i = preIndexPath.row; i <_originIndexPath.row; i++) {
+            if (_preMaxInd.row <= _originIndexPath.row) {
+                //从第1象限进入
+                for (NSInteger i = _preMaxInd.row; i <_originIndexPath.row; i++) {
                     [Tool removeCellsInLoopWithIndex:i section:_originCell.indexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                 }
                 
                 for (NSInteger i = _originIndexPath.row + 1; i <= currentIndexPath.row; i++) {
-                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
                 }
                 
                 
             }else{
                 //一直在第三象限
                 //原始section的普通情况
-                if (currentIndexPath.row > preRow) {
-                    for (NSInteger i = preRow + 1; i <= currentIndexPath.row ; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
+                if (currentIndexPath.row > _preMaxInd.row) {
+                    for (NSInteger i = _preMaxInd.row + 1; i <= currentIndexPath.row ; i++) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_preMaxInd.section array:_selectedIndexPathesForAssets];
                     }
-                }else if(currentIndexPath.row < preRow){
-                    for (NSInteger i = preRow; i > currentIndexPath.row; i--) {
-                        [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                }else if(currentIndexPath.row < _preMaxInd.row){
+                    for (NSInteger i = _preMaxInd.row; i > currentIndexPath.row; i--) {
+                        [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                     }
                 }
             }
         }else{
             //不是原始section的情况
-            if (currentIndexPath.row > preRow) {
-                for (NSInteger i = preRow + 1; i <= currentIndexPath.row ; i++) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
+            if (currentIndexPath.row > _preMaxInd.row) {
+                for (NSInteger i = _preMaxInd.row + 1; i <= currentIndexPath.row ; i++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_preMaxInd.section array:_selectedIndexPathesForAssets];
                 }
-            }else if(currentIndexPath.row < preRow){
-                for (NSInteger i = preRow; i > currentIndexPath.row; i--) {
-                    [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }else if(currentIndexPath.row < _preMaxInd.row){
+                for (NSInteger i = _preMaxInd.row; i > currentIndexPath.row; i--) {
+                    [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                 }
             }
         }
     }
-    else if (currentIndexPath.section > preIndexPath.section){
-        if (preIndexPath.section < _originIndexPath.section) {
-            //从上面滑下来
-            for (NSInteger i = preIndexPath.row ; i >= 0; i--) {
-                [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+    else if (currentIndexPath.section > _preMaxInd.section){
+        //下滑到新的section
+        if (_preMaxInd.section < _originIndexPath.section) {
+            //从第一象限进入第四象限
+//            for (NSInteger i = _preMaxInd.row ; i >= 0; i--) {
+//                [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+//            }
+//            
+//            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
+//                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+//            }
+            
+        }else if (_preMaxInd.section > _originIndexPath.section){
+            //把中间的section选上
+            for (NSInteger i = _preMaxInd.section ; i < currentIndexPath.section; i++) {
+                
+                NSDictionary *dict = _assets[i];
+                NSArray *nextSectionArr = dict[@"assets"];
+                for (NSInteger j = 0; j < nextSectionArr.count; j++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:j section:i array:_selectedIndexPathesForAssets];
+                }
             }
             
-            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
-                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            
+            //最大的那个section
+            for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
+                //                            NSLog(@"i:%ld",i);
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
             }
             
-        }
-        
-        
-        if (currentIndexPath.section > _originIndexPath.section) {
             
+            
+        }else if (_preMaxInd.section == _originIndexPath.section){
+            //把原始section剩下的全选上
             NSDictionary *dict = _assets[_originIndexPath.section];
-            NSArray *currentSectionArr = dict[@"assets"];
-            for (NSInteger i = _originIndexPath.row + 1; i < currentSectionArr.count ; i++) {
+            NSArray *originSectionArr = dict[@"assets"];
+            for (NSInteger i = _originIndexPath.row + 1; i < originSectionArr.count; i++) {
                 [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
             }
-            
-            //下部  滑到新的section
+            //再处理新的section
+            //把中间的section选上
+            for (NSInteger i = _preMaxInd.section + 1; i < currentIndexPath.section; i++) {
+
+            NSDictionary *dict = _assets[i];
+            NSArray *nextSectionArr = dict[@"assets"];
+                for (NSInteger j = 0; j < nextSectionArr.count; j++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:j section:i array:_selectedIndexPathesForAssets];
+                }
+            }
+            //最大的那个section
             for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
                 [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
             }
         }
-        
-    }else if (currentIndexPath.section < preIndexPath.section){
+    }else if (currentIndexPath.section < _preMaxInd.section){
         //上滑到新的section
-        for (NSInteger i = preIndexPath.row; i>= 0; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+        for (NSInteger i = _preMaxInd.row; i>= 0; i--) {
+            [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
         }
     }
+ }
+}
+// 第一象限
+- (void)handlerForFirstQuadrantWithCurrentLocation:(CGPoint)currentLocation{
+//    _preMaxInd = _originIndexPath;
+    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
+    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
+ 
+
+    
+    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
+    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
+    NSArray *sorts = @[s1,s2];
+    [arr sortUsingDescriptors:sorts];
+    
+    NSIndexPath *currentIndexPath = nil;
+    NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
+   
+    
+    if (arr.count > 0) {
+
+//        if (sectionsArr.count > 0) {
+//先按section进行分类
+//            NSIndexPath *minIndex = nil;
+                NSMutableArray *group = [[NSMutableArray alloc]init];
+                UICollectionViewLayoutAttributes *index = arr[0];
+                NSMutableArray *firt = [[NSMutableArray alloc]init];
+                [firt addObject:index];
+                [group addObject:firt];
+                NSInteger section = index.indexPath.section;
+                for (NSInteger i = 1; i < arr.count; i++) {
+                    UICollectionViewLayoutAttributes *temp = arr[i];
+                    if (temp.indexPath.section == section) {
+                        NSMutableArray *element = group.lastObject;
+                        [element addObject:temp];
+                    }else if (temp.indexPath.section > section){
+                        section = temp.indexPath.section;
+                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                        [nextElement addObject:temp];
+                        [group addObject:nextElement];
+                    }
+                }
+            
+        
+//               currentIndexPath = firstElement.lastObject;
+        
+        
+        if (group.count > 1) {
+
+            //要判断是上滑还是下滑
+            if (arr.count > _preIndexArr.count) {
+                //上滑,增加了元素
+                //分别处理最后一个section，第一个section和中间的section
+                //第一个section
+                NSMutableArray *firstPart = group[0];
+                UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+                if (att.representedElementCategory == 1) {
+                    //说明已经包含headerview
+                    //把该section全选上
+                    NSDictionary *dict = _assets[att.indexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    for (NSInteger i = currentSectionArr.count- 1 ; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:att.indexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                    
+                }else if (att.representedElementCategory == 0){
+                    //没包含headerview
+                    //归类
+                    NSMutableArray *firstSectionGroup = group[0];
+                    NSMutableArray *divGroup = [[NSMutableArray alloc]init];
+                    UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
+                    NSMutableArray *first = [[NSMutableArray alloc]init];
+                    [first addObject:index];
+                    [divGroup addObject:first];
+                    NSInteger remainder = index.indexPath.row/numberPerLine;
+                    for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
+                        UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
+                        if (temp.indexPath.row / numberPerLine == remainder) {
+                            NSMutableArray *element = [divGroup lastObject];
+                            [element addObject:temp];
+                        }else if(temp.indexPath.row / numberPerLine > remainder){
+                            remainder = temp.indexPath.row / numberPerLine;
+                            NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                            [nextElement addObject:temp];
+                            [divGroup addObject:nextElement];
+                        }
+                        
+                    }
+                    NSMutableArray *firstPart = divGroup[0];
+                    UICollectionViewLayoutAttributes *att = firstPart.lastObject;
+                    currentIndexPath = att.indexPath;
+                    
+                    NSDictionary *dict = _assets[currentIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    
+                    if (currentIndexPath.row < preIndexPath.row) {
+                        for (NSInteger i = currentSectionArr.count- 1 ; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                    }else if (currentIndexPath.row > preIndexPath.row){
+                        //为了保险
+                        for (NSInteger i = currentSectionArr.count- 1 ; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                        
+                        for (NSInteger i = preIndexPath.row; i < currentIndexPath.row; i++) {
+                            [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                }
+                
+                //中间的section,全选
+                
+                
+                for ( NSInteger i = 1; i < group.count - 1; i ++) {
+                    NSMutableArray *midPart = group[i];
+                    UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
+                    NSDictionary *dict = _assets[firstAtt.indexPath.section];
+                    NSArray *midSectionArr = dict[@"assets"];
+                    for (NSInteger i = midSectionArr.count - 1 ; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                }
+                //最后一个section
+                NSMutableArray *lastPart = group.lastObject;
+                UICollectionViewLayoutAttributes *lastAtt = lastPart.firstObject;
+                if (lastAtt.representedElementCategory == 1) {
+                    //理论上是原始section
+                    for (NSInteger i = _originIndexPath.row ; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                    NSDictionary *dict = _assets[_originIndexPath.section];
+                    NSArray *originSectionArr = dict[@"assets"];
+                    for (NSInteger i = _originIndexPath.row + 1; i < originSectionArr.count; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                }
+  
+            }else if (arr.count < _preIndexArr.count){
+                //下滑，减少了元素
+                
+                NSMutableArray *firstPart = group[0];
+                UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+                //判断是否已包含headerview
+                if (att.representedElementCategory == 1) {
+                    //下滑到headerview
+                    //把 之前的section的全删掉
+                    
+                    UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                    UICollectionViewLayoutAttributes *endSection = arr.firstObject;
+                    for (NSInteger i = firstSection.indexPath.section; i < endSection.indexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+
+                    
+                    
+                    
+                }else if (att.representedElementCategory == 0){
+                    //下滑到secxtion内
+                   
+                    
+                    //归类
+                    NSMutableArray *firstSectionGroup = group[0];
+                    NSMutableArray *divGroup = [[NSMutableArray alloc]init];
+                    UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
+                    NSMutableArray *first = [[NSMutableArray alloc]init];
+                    [first addObject:index];
+                    [divGroup addObject:first];
+                    NSInteger remainder = index.indexPath.row/numberPerLine;
+                    for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
+                        UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
+                        if (temp.indexPath.row / numberPerLine == remainder) {
+                            NSMutableArray *element = [divGroup lastObject];
+                            [element addObject:temp];
+                        }else if(temp.indexPath.row / numberPerLine > remainder){
+                            remainder = temp.indexPath.row / numberPerLine;
+                            NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                            [nextElement addObject:temp];
+                            [divGroup addObject:nextElement];
+                        }
+                        
+                    }
+                    
+                    NSMutableArray *firstPart = divGroup[0];
+                    UICollectionViewLayoutAttributes *att = firstPart.lastObject;
+                    currentIndexPath = att.indexPath;
+                    
+                    
+                    //把 之前的section的全删掉
+                    UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                    for (NSInteger i = firstSection.indexPath.section; i < currentIndexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    
+                    for (NSInteger i = 0 ; i < currentIndexPath.row; i++) {
+                         [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+
+                }
+            }
+        }
+        else{
+//            NSLog(@"1");
+            //只包含一个section,理论上应该是原始section
+            NSMutableArray *firstPart = group[0];
+            UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+            //判断是否已包含headerview
+            if (att.representedElementCategory == 1) {
+                //说明已经包含headerview
+                //而且只包含了一个headerview
+                //有两种可能，1:上滑进入headerview，2下滑进入headerview
+                //1如果上次的坐标数组喝这一次的数组的个数一样，说明是上滑进入headerview
+                if (_preIndexArr.count <= arr.count) {
+                    //原始section，把剩下的都选上
+                    
+                    for (NSInteger i = _originIndexPath.row ; i >= 0; i--) {
+                         [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                }else if (_preIndexArr.count > arr.count){
+                    //2 如果上次的数组的个数大，表示上次包含的section数多，所以是下滑进入headerview
+                    //把 之前的section的全删掉
+                    UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+//                    NSLog(@"prearr:%@",_preIndexArr);
+//                    NSLog(@"indexarr:%@",arr);
+//                    NSLog(@"group:%@",group);
+//                    NSLog(@"prein:%@",preIndexPath);
+                    for (NSInteger i = firstSection.indexPath.section; i < att.indexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    
+                    
+                }
+            }else if (att.representedElementCategory == 0){
+                //没包含headerview
+                //归类
+                NSMutableArray *firstSectionGroup = group[0];
+                NSMutableArray *divGroup = [[NSMutableArray alloc]init];
+                UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
+                NSMutableArray *first = [[NSMutableArray alloc]init];
+                [first addObject:index];
+                [divGroup addObject:first];
+                NSInteger remainder = index.indexPath.row/numberPerLine;
+                for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
+                    UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
+                    if (temp.indexPath.row / numberPerLine == remainder) {
+                        NSMutableArray *element = [divGroup lastObject];
+                        [element addObject:temp];
+                    }else if(temp.indexPath.row / numberPerLine > remainder){
+                        remainder = temp.indexPath.row / numberPerLine;
+                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                        [nextElement addObject:temp];
+                        [divGroup addObject:nextElement];
+                    }
+                    
+                }
+                
+                NSMutableArray *firstPart = divGroup[0];
+                UICollectionViewLayoutAttributes *att = firstPart.lastObject;
+                currentIndexPath = att.indexPath;
+                
+                
+                
+                if (_preIndexArr.count > arr.count) {
+                    // 下滑
+                    //把 之前的section的全删掉
+                   UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                    for (NSInteger i = firstSection.indexPath.section; i < currentIndexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    for (NSInteger i = 0; i < currentIndexPath.row; i++) {
+                         [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                    
+                    
+                    
+                }else{
+                    //上滑
+                    NSDictionary *dict = _assets[currentIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    
+                    if (currentIndexPath.row < preIndexPath.row) {
+                        for (NSInteger i = _originIndexPath.row ; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                    }else if (currentIndexPath.row > preIndexPath.row){
+                        //为了保险
+                        for (NSInteger i = _originIndexPath.row ; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                        
+                        for (NSInteger i = preIndexPath.row; i < currentIndexPath.row; i++) {
+                            [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    for (NSInteger i = _originIndexPath.row + 1; i < currentSectionArr.count; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                }
+                
+               
+                
+            }
+            
+        }
+        
+        _preIndexArr = arr;
+        
+
+    }
+    
+   
+ 
+    
+    
+}
+//第三象限
+
+- (void)handlerForThirdQuadrantWithCurrentLocation:(CGPoint)currentLocation{
+    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y);
+    NSArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect];
+    NSMutableArray *indexArr = [[NSMutableArray alloc]init];
+    for (NSInteger i = 0; i < arr.count; i++) {
+        UICollectionViewLayoutAttributes *att = arr[i];
+        [indexArr addObject:att.indexPath];
+    }
+    [indexArr sortUsingComparator:^NSComparisonResult(NSIndexPath * obj1, NSIndexPath * obj2) {
+        return [obj1 compare:obj2];
+    }];
+    NSIndexPath *currentIndexPath = nil;
+    _preMaxInd = _selectedIndexPathesForAssets.lastObject;
+    NSIndexPath *preIndexPath = _preMaxInd;
+    if (indexArr.count > 0) {
+        NSMutableArray *sectionsArr = [[NSMutableArray alloc]init];
+        NSIndexPath *index0 = indexArr[0];
+        [sectionsArr addObject:[NSNumber numberWithInteger:index0.section]];
+        for (NSInteger i = 0; i<indexArr.count; i++) {
+            NSIndexPath *ind = indexArr[i];
+            NSNumber *section = [sectionsArr lastObject];
+            if (ind.section > section.integerValue) {
+                [sectionsArr addObject:[NSNumber numberWithInteger:ind.section]];
+            }
+            
+        }
+        
+//                NSLog(@"indexarr:%@",indexArr);
+        //先按section进行分类
+        //            NSIndexPath *minIndex = nil;
+        NSMutableArray *group = [[NSMutableArray alloc]init];
+        NSIndexPath *index = indexArr[0];
+        NSMutableArray *firt = [[NSMutableArray alloc]init];
+        [firt addObject:index];
+        [group addObject:firt];
+        NSInteger section = index.section;
+        for (NSInteger i = 1; i < indexArr.count; i++) {
+            NSIndexPath *temp = indexArr[i];
+            if (temp.section == section) {
+                NSMutableArray *element = group.lastObject;
+                [element addObject:temp];
+            }else if (temp.section > section){
+                section = temp.section;
+                NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                [nextElement addObject:temp];
+                [group addObject:nextElement];
+            }
+        }
+        
+        NSMutableArray *firstElement = group.lastObject;
+        currentIndexPath = firstElement.firstObject;
+    
+        if (currentIndexPath.section == preIndexPath.section) {
+            //同一个section
+            //再进行分类,同一行的为一组
+            NSMutableArray *group = [[NSMutableArray alloc]init];
+            NSIndexPath *index = firstElement[0];
+            NSMutableArray *first = [[NSMutableArray alloc]init];
+            [first addObject:index];
+            [group addObject:first];
+            NSInteger remainder = index.row/numberPerLine;
+            for (NSInteger i = 1; i< firstElement.count; i++) {
+                NSIndexPath *index = firstElement[i];
+                if (index.row / numberPerLine == remainder) {
+                    NSMutableArray *element = [group lastObject];
+                    [element addObject:index];
+                }else if(index.row / numberPerLine > remainder){
+                    remainder = index.row / numberPerLine;
+                    NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                    [nextElement addObject:index];
+                    [group addObject:nextElement];
+                }
+                
+            }
+            NSMutableArray *firstElement = group.lastObject;
+            currentIndexPath = firstElement.firstObject;
+        }
+        
+        
+        
+    
+    //滑到一个cell上
+    if (currentIndexPath.section == _preMaxInd.section) {
+        if (currentIndexPath.section == _originIndexPath.section) {
+            if (_preMaxInd.row <= _originIndexPath.row) {
+                //从第二象限进入
+                for (NSInteger i = _preMaxInd.row; i <_originIndexPath.row; i++) {
+                    [Tool removeCellsInLoopWithIndex:i section:_originCell.indexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                }
+                
+                for (NSInteger i = _originIndexPath.row + 1; i <= currentIndexPath.row; i++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
+                }
+                
+                
+            }else{
+                //一直在第三象限
+                //原始section的普通情况
+                if (currentIndexPath.row > _preMaxInd.row) {
+                    for (NSInteger i = _preMaxInd.row + 1; i <= currentIndexPath.row ; i++) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_preMaxInd.section array:_selectedIndexPathesForAssets];
+                    }
+                }else if(currentIndexPath.row < _preMaxInd.row){
+                    for (NSInteger i = _preMaxInd.row; i > currentIndexPath.row; i--) {
+                        [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                }
+            }
+        }else{
+            //不是原始section的情况
+            if (currentIndexPath.row > _preMaxInd.row) {
+                for (NSInteger i = _preMaxInd.row + 1; i <= currentIndexPath.row ; i++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_preMaxInd.section array:_selectedIndexPathesForAssets];
+                }
+            }else if(currentIndexPath.row < _preMaxInd.row){
+                for (NSInteger i = _preMaxInd.row; i > currentIndexPath.row; i--) {
+                    [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                }
+            }
+        }
+    }
+    else if (currentIndexPath.section > _preMaxInd.section){
+        //下滑到新的section
+        if (_preMaxInd.section < _originIndexPath.section) {
+            //从第一象限进入第四象限
+            //            for (NSInteger i = _preMaxInd.row ; i >= 0; i--) {
+            //                [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            //            }
+            //
+            //            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
+            //                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            //            }
+            
+        }else if (_preMaxInd.section > _originIndexPath.section){
+            //把中间的section选上
+            for (NSInteger i = _preMaxInd.section ; i < currentIndexPath.section; i++) {
+                
+                NSDictionary *dict = _assets[i];
+                NSArray *nextSectionArr = dict[@"assets"];
+                for (NSInteger j = 0; j < nextSectionArr.count; j++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:j section:i array:_selectedIndexPathesForAssets];
+                }
+            }
+            
+            
+            //最大的那个section
+            for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
+                //                            NSLog(@"i:%ld",i);
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+            
+            
+            
+        }else if (_preMaxInd.section == _originIndexPath.section){
+            //把原始section剩下的全选上
+            NSDictionary *dict = _assets[_originIndexPath.section];
+            NSArray *originSectionArr = dict[@"assets"];
+            for (NSInteger i = _originIndexPath.row + 1; i < originSectionArr.count; i++) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+            //再处理新的section
+            //把中间的section选上
+            for (NSInteger i = _preMaxInd.section + 1; i < currentIndexPath.section; i++) {
+                
+                NSDictionary *dict = _assets[i];
+                NSArray *nextSectionArr = dict[@"assets"];
+                for (NSInteger j = 0; j < nextSectionArr.count; j++) {
+                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:j section:i array:_selectedIndexPathesForAssets];
+                }
+            }
+            //最大的那个section
+            for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
+                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+            }
+        }
+
+        
+    }else if (currentIndexPath.section < _preMaxInd.section){
+        //上滑到新的section
+        for (NSInteger i = _preMaxInd.row; i>= 0; i--) {
+            [Tool removeCellsInLoopWithIndex:i section:_preMaxInd.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+        }
+    }
+}
+    
 }
 
 
 //第二象限
 
 - (void)handlerForSecondQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-    CGFloat itemCellWidth = ([UIScreen mainScreen].bounds.size.width/2 ) / numberPerLine - kXMNMargin;
-    NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    NSMutableArray *arr = [_selectedIndexPathesForAssets lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
-    NSInteger preRow = preIndexPath.row;
-    PCAssetCell *preCell =(PCAssetCell *) [_collectionView cellForItemAtIndexPath:preIndexPath];
-        if (!currentIndexPath) {
-            if (currentLocation.y >preCell.frame.origin.y && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height) {
-                if (currentLocation.x > preCell.frame.origin.x + preCell.frame.size.width) {
-                    currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row + 1 inSection:preIndexPath.section];
-                }else if (currentLocation.x < preCell.frame.origin.x){
-                    NSInteger currentRow = preIndexPath.row > 0 ? preIndexPath.row : 0;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }else if (currentLocation.y <= preCell.frame.origin.y && currentLocation.y > preCell.frame.origin.y - minLineSpacing ){
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row  inSection:preIndexPath.section];
-            }else if(currentLocation.y < preCell.frame.origin.y - minLineSpacing){
-                //向上滑
-                //判断precell是不是在该section的 第一行上
-                
-                if (preIndexPath.row < numberPerLine && preIndexPath.row >= 0) {
-                    //在第一行
-                    if (currentLocation.y < preCell.frame.origin.y && currentLocation.y > preCell.frame.origin.y - collectionHeaderHeight) {
-                        //向上滑则进入headerview
-                        currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section];
-                        
-                    }else if(currentLocation.y <= preCell.frame.origin.y - collectionHeaderHeight ){
-                        //通过headerview进入上一个section
-                        //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                        NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                        NSArray *currentSectionArr = dict[@"assets"];
-                        if (currentSectionArr.count > numberPerLine) {
-                            //多于一行
-                            CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                            CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                            NSInteger currentRow = row * numberPerLine + low + 1;;
-                            if (currentRow > currentSectionArr.count - 1) {
-                                //在section的右边
-                                currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                            }else{
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                            }
-                            if (currentLocation.y < preCell.frame.origin.y - collectionHeaderHeight - itemCellWidth - minLineSpacing) {
-                                //进入倒数第二行
-                                CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                                CGFloat row = (currentSectionArr.count - 1)/numberPerLine - 1 ;
-                                NSInteger currentRow = row * numberPerLine + low + 1;;
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                            }
-                        }else{
-                            //只有一行
-                            CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                            CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                            NSInteger currentRow = row * numberPerLine + low + 1;;
-                            if (currentRow > currentSectionArr.count - 1) {
-                                //在section的右边
-                                currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                            }else{
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                            }
-                            if (currentLocation.y <= preCell.frame.origin.y - collectionHeaderHeight - itemCellWidth ){
-                                //再继续向上滑
-                                NSDictionary *dict = _assets[preIndexPath.section - 1 ];
-                                NSArray *currentSectionArr = dict[@"assets"];
-                                if (currentSectionArr.count < numberPerLine) {
-                                    currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section - 1 ];
-                                }
-                            }
-                        }
+    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
+    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
+    
+    
+    
+    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
+    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
+    NSArray *sorts = @[s1,s2];
+    [arr sortUsingDescriptors:sorts];
+    
+    NSIndexPath *currentIndexPath = nil;
+    NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
+    
+    
+    if (arr.count > 0) {
+        
+       
+        NSMutableArray *group = [self groupFromAttributeArr:arr];
+        
+        if (arr.count > _preIndexArr.count) {
+            // 增加
+            
+            NSMutableArray *firstPart = group[0];
+            UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+            if (att.representedElementCategory == 1) {
+                //进到headerview
+                if (group.count > 1) {
+                 //有多个section
+                    //把原始section 剩下的都选上
+                    for (NSInteger i = _originIndexPath.row; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
                     }
-                }else{
-                    //不在第一行
-                    if(currentLocation.y < preCell.frame.origin.y - minLineSpacing  && currentLocation.y >= preCell.frame.origin.y - minLineSpacing - itemCellWidth){
-                        CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                        CGFloat row = (preIndexPath.row /numberPerLine ) - 1;
-                        NSInteger currentRow = row * numberPerLine + low + 1;
-                        currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                    }
-                }
-            }else if(currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height){
-                //向下滑
-                //判断precell在不在最后一行
-                NSDictionary *dict = _assets[preIndexPath.section  ];
-                NSArray *preSectionArr = dict[@"assets"];
-                if ((preIndexPath.row / numberPerLine)  == ((preSectionArr.count - 1 )/ numberPerLine) ) {
-                    //在最后一行
-                    //向下滑进入headerview
-                    if (currentLocation.y > preCell.frame.origin.y + preCell.frame.size.height && currentLocation.y <= preCell.frame.origin.y + preCell.frame.size.height + collectionHeaderHeight) {
-                        currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section + 1];
-                    }else{
-                        //通过headerview进入下一个section
-                        //判断该section有多少行，如果只有一行，那么继续向上滑就又进入一个headerview，如果多于一行，则进入sectin内部
-                        NSDictionary *dict = _assets[preIndexPath.section + 1 ];
-                        NSArray *currentSectionArr = dict[@"assets"];
-                        if (currentSectionArr.count > numberPerLine) {
-                            //多于一行
-                            CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                            CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                            NSInteger currentRow = row * numberPerLine + low + 1;;
-                            if (currentRow > currentSectionArr.count - 1) {
-                                //在section的右边
-                                currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                            }else{
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                            }
-                        }else{
-                            //只有一行
-                            CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                            CGFloat row = (currentSectionArr.count - 1)/numberPerLine ;
-                            NSInteger currentRow = row * numberPerLine + low + 1;;
-                            if (currentRow > currentSectionArr.count - 1) {
-                                //在section的右边
-                                currentIndexPath = [NSIndexPath indexPathForRow:0 inSection:preIndexPath.section ];
-                            }else{
-                                currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section - 1];
-                            }
-                        }
-                    }
-                }else{
-                    //不在最后一行
                     
-                    CGFloat  low = floor( (currentLocation.x - 0) / (itemCellWidth + _realItemInterSpace)) ;
-                    CGFloat row = (preIndexPath.row /numberPerLine ) + 1;
-                    NSInteger currentRow = row * numberPerLine + low + 1;
-                    currentIndexPath = [NSIndexPath indexPathForRow:currentRow inSection:preIndexPath.section];
-                }
-            }else{
-                currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-            }
-        }
-    if(!currentIndexPath){
-        //  如果这时currentindexpath还是空，就设此值
-        currentIndexPath = [NSIndexPath indexPathForRow:preIndexPath.row inSection:preIndexPath.section];
-    }
-    //滑到一个cell上
-    if (currentIndexPath.section == preIndexPath.section) {
-        if (currentIndexPath.section == _originIndexPath.section) {
-            //跟原始cell在一个section
-            if (preIndexPath.row >= _originIndexPath.row) {
-                //从第三象限进入
-                for (NSInteger i = preIndexPath.row; i>_originIndexPath.row; i--) {
-                    [Tool removeCellsInLoopWithIndex:i section:_originCell.indexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                for (NSInteger i = _originIndexPath.row - 1; i >= currentIndexPath.row; i--) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originCell.indexPath.section array:_selectedIndexPathesForAssets];
-                }
-            }else{
-                if (currentIndexPath.row < preRow) {
-                    for (NSInteger i = preRow - 1; i >= currentIndexPath.row ; i--) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
+                    NSDictionary *dict = _assets[_originIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    for (NSInteger i = _originIndexPath.row + 1;i < currentSectionArr.count ; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                     }
-                }else if(currentIndexPath.row > preRow){
-                    for (NSInteger i = preRow; i < currentIndexPath.row; i++) {
-                        [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    
+                    //处理剩下的seciton
+                    
+                    for ( NSInteger i = 0; i < group.count - 1; i ++) {
+                        NSMutableArray *midPart = group[i];
+                        UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
+                        NSDictionary *dict = _assets[firstAtt.indexPath.section];
+                        NSArray *midSectionArr = dict[@"assets"];
+                        for (NSInteger i = midSectionArr.count - 1 ; i >= 0; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    
+                    
+                }else{
+                    //只有一个section
+                    //把原始section 剩下的都选上
+                    for (NSInteger i = _originIndexPath.row; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                   
+                    NSDictionary *dict = _assets[_originIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    for (NSInteger i = _originIndexPath.row + 1;i < currentSectionArr.count ; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                }
+            }else if (att.representedElementCategory == 0){
+                //进到section
+                //归类
+                NSMutableArray *firstSectionGroup = group[0];
+                NSMutableArray *divGroup = [[NSMutableArray alloc]init];
+                UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
+                NSMutableArray *first = [[NSMutableArray alloc]init];
+                [first addObject:index];
+                [divGroup addObject:first];
+                NSInteger remainder = index.indexPath.row/numberPerLine;
+                for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
+                    UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
+                    if (temp.indexPath.row / numberPerLine == remainder) {
+                        NSMutableArray *element = [divGroup lastObject];
+                        [element addObject:temp];
+                    }else if(temp.indexPath.row / numberPerLine > remainder){
+                        remainder = temp.indexPath.row / numberPerLine;
+                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                        [nextElement addObject:temp];
+                        [divGroup addObject:nextElement];
+                    }
+                    
+                }
+                
+                NSMutableArray *firstPart = divGroup[0];
+                UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+                currentIndexPath = att.indexPath;
+//                NSLog(@"divgroup:%@",divGroup);
+                
+                
+                if (group.count > 1) {
+                    //有多个section
+                    //处理第一个section  中间的section  最后一个section
+                    //第一个section
+                    
+                    NSDictionary *dict = _assets[currentIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    for (NSInteger i = currentSectionArr.count - 1;i >= currentIndexPath.row ; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                    
+                    //处理中间的seciton
+                    
+                    for ( NSInteger i = 1; i < group.count - 1; i ++) {
+                        NSMutableArray *midPart = group[i];
+                        UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
+                        NSDictionary *dict = _assets[firstAtt.indexPath.section];
+                        NSArray *midSectionArr = dict[@"assets"];
+                        for (NSInteger i = midSectionArr.count - 1 ; i >= 0; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                    }
+
+                    //把原始section 剩下的都选上
+                    for (NSInteger i = _originIndexPath.row; i >= 0; i--) {
+                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                    }
+                    
+                    dict = _assets[_originIndexPath.section];
+                    NSArray *originSectionArr = dict[@"assets"];
+                    for (NSInteger i = _originIndexPath.row + 1;i < originSectionArr.count ; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                    
+                    
+                }else{
+                    //只有一个section
+                    // 原始section
+                    if (currentIndexPath.row < preIndexPath.row) {
+                        for (NSInteger i = _originIndexPath.row; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    NSDictionary *dict = _assets[currentIndexPath.section];
+                    NSArray *currentSectionArr = dict[@"assets"];
+                    for (NSInteger i = _originIndexPath.row + 1;i < currentSectionArr.count ; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
                     }
                 }
             }
-        }else {
-            
-            if (currentIndexPath.row < preRow) {
-                for (NSInteger i = preRow - 1; i >= currentIndexPath.row ; i--) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section array:_selectedIndexPathesForAssets];
+        }else if(arr.count < _preIndexArr.count){
+            //减少
+//            NSLog(@"arr:%@",arr);
+            NSMutableArray *firstPart = group[0];
+            UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+            if (att.representedElementCategory == 1) {
+                //下滑进到headerview
+                //把之前的section全删了
+                UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                UICollectionViewLayoutAttributes *endSection = arr.firstObject;
+                for (NSInteger i = firstSection.indexPath.section; i < endSection.indexPath.section; i++) {
+                    NSDictionary *dict = _assets[i];
+                    NSArray *preSectionArr = dict[@"assets"];
+                    for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                        [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
                 }
-            }else if(currentIndexPath.row > preRow){
-                for (NSInteger i = preRow; i < currentIndexPath.row; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+            }else if (att.representedElementCategory == 0){
+                //进到section
+                //归类
+                NSMutableArray *firstSectionGroup = group[0];
+                NSMutableArray *divGroup = [[NSMutableArray alloc]init];
+                UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
+                NSMutableArray *first = [[NSMutableArray alloc]init];
+                [first addObject:index];
+                [divGroup addObject:first];
+                NSInteger remainder = index.indexPath.row/numberPerLine;
+                for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
+                    UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
+                    if (temp.indexPath.row / numberPerLine == remainder) {
+                        NSMutableArray *element = [divGroup lastObject];
+                        [element addObject:temp];
+                    }else if(temp.indexPath.row / numberPerLine > remainder){
+                        remainder = temp.indexPath.row / numberPerLine;
+                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+                        [nextElement addObject:temp];
+                        [divGroup addObject:nextElement];
+                    }
+                    
+                }
+                
+                NSMutableArray *firstPart = divGroup[0];
+                UICollectionViewLayoutAttributes *att = firstPart.firstObject;
+                currentIndexPath = att.indexPath;
+                //                NSLog(@"divgroup:%@",divGroup);
+                
+                
+                if (group.count > 1) {
+                    
+                    //把 之前的section的全删掉
+                    UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                    UICollectionViewLayoutAttributes *endSection = arr.firstObject;
+                    for (NSInteger i = firstSection.indexPath.section; i < endSection.indexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    //再处理当前section
+                    for (NSInteger i = 0 ; i < currentIndexPath.row; i++) {
+                        [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                    }
+                    
+                    
+                    
+                    
+                }else{
+                    //只有一个section
+                    // 原始section
+                    //把 之前的section的全删掉
+                    UICollectionViewLayoutAttributes *firstSection = _preIndexArr.firstObject;
+                    UICollectionViewLayoutAttributes *endSection = arr.firstObject;
+                    for (NSInteger i = firstSection.indexPath.section; i < endSection.indexPath.section; i++) {
+                        NSDictionary *dict = _assets[i];
+                        NSArray *preSectionArr = dict[@"assets"];
+                        for (NSInteger j = 0; j < preSectionArr.count ; j++) {
+                            [Tool removeCellsInLoopWithIndex:j section:i collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
+                    
+                    
+                    
+                    
+                    
+                    
+                    if (currentIndexPath.row > preIndexPath.row) {
+                        for (NSInteger i = _originIndexPath.row; i >= currentIndexPath.row; i--) {
+                            [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
+                        }
+                        
+                        for (NSInteger i = preIndexPath.row; i < currentIndexPath.row; i++) {
+                            [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+                        }
+                    }
                 }
             }
         }
-    }else if (currentIndexPath.section < preIndexPath.section){
-        if (preIndexPath.section > _originIndexPath.section) {
-            for (NSInteger i = preIndexPath.row; i >= 0; i--) {
-                 [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-            }
-           
-            NSDictionary *dict = _assets[_originIndexPath.section];
-            NSArray *currentSectionArr = dict[@"assets"];
-            
-            for (NSInteger i = currentSectionArr.count - 1; i>_originIndexPath.row; i--) {
-                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-            }
-            
-            for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-            }
-        }else if (preIndexPath.section < _originIndexPath.section){
-            NSDictionary *dict = _assets[preIndexPath.section ];
-            NSArray *currentSectionArr = dict[@"assets"];
-            
-            for (NSInteger i = currentSectionArr.count - 1; i>=0; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section  array:_selectedIndexPathesForAssets];
-            }
-        }else if (preIndexPath.section == _originIndexPath.section){
-            NSDictionary *dict = _assets[preIndexPath.section ];
-            NSArray *currentSectionArr = dict[@"assets"];
-            
-            for (NSInteger i = currentSectionArr.count - 1; i>_originIndexPath.row; i--) {
-                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-            }
-            
-            for (NSInteger i = _originIndexPath.row - 1; i>= 0; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section  array:_selectedIndexPathesForAssets];
-            }
-        }
         
         
         
-        if (currentIndexPath.section < _originIndexPath.section) {
-            
-            for (NSInteger i = _originIndexPath.row - 1; i>= 0; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section  array:_selectedIndexPathesForAssets];
-            }
-            
-            
-            //从headerview进入一个新的section
-            NSDictionary *dict = _assets[preIndexPath.section - 1];
-            NSArray *currentSectionArr = dict[@"assets"];
-            
-            for (NSInteger i = currentSectionArr.count - 1; i>=currentIndexPath.row; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:preIndexPath.section - 1 array:_selectedIndexPathesForAssets];
-            }
-        }
         
-    }else if(currentIndexPath.section > preIndexPath.section){
-        //下滑到新的section
-        NSDictionary *dict = _assets[preIndexPath.section];
-        NSArray *currentSectionArr = dict[@"assets"];
-        for (NSInteger i = preIndexPath.row; i <= currentSectionArr.count - 1 ; i++) {
-            [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
+        
+    }
+    _preIndexArr = arr;
+}
+
+//先按section进行分类
+- (NSMutableArray *)groupFromAttributeArr:(NSMutableArray *)arr{
+    NSMutableArray *group = [[NSMutableArray alloc]init];
+    UICollectionViewLayoutAttributes *index = arr[0];
+    NSMutableArray *firt = [[NSMutableArray alloc]init];
+    [firt addObject:index];
+    [group addObject:firt];
+    NSInteger section = index.indexPath.section;
+    for (NSInteger i = 1; i < arr.count; i++) {
+        UICollectionViewLayoutAttributes *temp = arr[i];
+        if (temp.indexPath.section == section) {
+            NSMutableArray *element = group.lastObject;
+            [element addObject:temp];
+        }else if (temp.indexPath.section > section){
+            section = temp.indexPath.section;
+            NSMutableArray *nextElement = [[NSMutableArray alloc]init];
+            [nextElement addObject:temp];
+            [group addObject:nextElement];
         }
     }
+    return group;
 }
 
 
@@ -1439,6 +1548,20 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 
 - (void)currentLocationDidChange:(CGPoint)currentLocation{
+    if (_firstTimeMove) {
+        CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
+        NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
+        
+        
+        
+        NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
+        NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
+        NSArray *sorts = @[s1,s2];
+        [arr sortUsingDescriptors:sorts];
+        _firstTimeMove = NO;
+        _preIndexArr = arr;
+    }
+    
     if (_originCell && _selectedIndexPathesForAssets.count > 0) {
         //先按起始点的x坐标分为左右两边 右边的处于第一象限 和第四象限 左边的处于第二象限和第三象限
         if (currentLocation.x >= _originLocation.x ) {
@@ -1446,13 +1569,13 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             if (currentLocation.y >= _originCellY ) {
                 //                    NSLog(@"forth");
                 
-//                [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
+                [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
 //                [self handlerForDownAreaWithCurrentLocation:currentLocation];
-                [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
+//                [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
             }else if(currentLocation.y < _originCellY - minLineSpacing  && currentLocation.y > 0){
-//                [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
+                [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
 //                            [self handlerForUperAreaWithCurrentLocation:currentLocation];
-                 [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
+//                 [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
             }
         }
         else if (currentLocation.x < _originLocation.x  ){
@@ -1460,6 +1583,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             if (currentLocation.y >= _originCellY + cellWidth) {
 //                [self handlerForDownAreaWithCurrentLocation:currentLocation];
                 [self handlerForThirdQuadrantWithCurrentLocation:currentLocation];
+//                 [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
             }else if(currentLocation.y > 0){
 //                [self handlerForUperAreaWithCurrentLocation:currentLocation];
                  [self handlerForSecondQuadrantWithCurrentLocation:currentLocation];
@@ -1473,7 +1597,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 - (void)handlerForPanWhenSelectionBegin:(UIPanGestureRecognizer *)pan{
     CGPoint currentLocation = [pan locationInView:self.collectionView];
     NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
-    
+    _firstTimeMove = YES;
     if (currentIndexPath) {
         _originLocation = [pan locationInView:self.collectionView];
         _originIndexPath = [_collectionView indexPathForItemAtPoint:_originLocation];
@@ -1486,8 +1610,9 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                 NSMutableArray *currentSelectedArr = [[NSMutableArray alloc]init];
                 [currentSelectedArr addObject:_originIndexPath];
                 _originCell.stateBtnSelected = YES;
-                [_selectedIndexPathesForAssets addObject:currentSelectedArr];
+                [_selectedIndexPathesForAssets addObject:_originIndexPath];
                 _originCellY = _originCell.frame.origin.y;
+                _preMaxInd = _originIndexPath;
             }else{
                 //选择过程结束，开始拖动复制
                 _doneSelection = YES;
@@ -1495,6 +1620,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             }
         }
     }else{
+        
         if (_originCell) {
             _originCell = nil;
         }
@@ -1502,6 +1628,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             _originIndexPath = nil;
         }
         _originCellY = 0;
+        _preMaxInd = nil;
         //如果滑动的位置位于item cell的中间地带，则indexpath.row会返回0，但是此时未必选中row为0的item，所以要做个判断，
         return;
     }
@@ -1518,6 +1645,8 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             if (_originCell) {
                 if (!_rolling) {
                     CGPoint currentLocation = [pan locationInView:self.collectionView];
+                    
+//                    NSLog(@"arr:%@",arr);
                     [self currentLocationDidChange:currentLocation];
                 }
                 //pan手势滑到底部时，collectionview开始自动滚动
@@ -1528,6 +1657,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             [self handlerWhenSelctionDoneWithPanInTheChangeState:pan];
         }
     }else if (pan.state == UIGestureRecognizerStateEnded){
+        _firstTimeMove = NO;
         if (!_doneSelection) {
             if (_timer) {
                 [_timer invalidate];
@@ -1762,11 +1892,11 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         _doneSelection = NO;
         if (_selectedIndexPathesForAssets.count > 0) {
            
-            for (NSArray *arr in _selectedIndexPathesForAssets) {
-                for (NSIndexPath *index in arr) {
+            for (NSIndexPath *index in _selectedIndexPathesForAssets) {
+//                for ( in arr) {
                     PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
                     cell.stateBtnSelected = NO;
-                }
+//                }
             }
             
             for (NSInteger i = 0; i < _selectedAllForSectionArr.count; i++) {
@@ -1955,15 +2085,15 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 - (void)pccassetCellDidDeselected:(PCAssetCell *)assetCell{
     for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
         NSMutableArray *arr = _selectedIndexPathesForAssets[i];
-        for (int j = 0; j<arr.count; j++) {
-            NSIndexPath *temp = arr[j];
+//        for (int j = 0; j<arr.count; j++) {
+            NSIndexPath *temp = arr[i];
             if (temp.row == assetCell.indexPath.row && temp.section == assetCell.indexPath.section) {
                 [arr removeObject:temp];
             }
-        }
-        if (arr.count <= 0) {
-            [_selectedIndexPathesForAssets removeObject:arr];
-        }
+//        }
+//        if (arr.count <= 0) {
+//            [_selectedIndexPathesForAssets removeObject:arr];
+//        }
     }
 }
 @end
