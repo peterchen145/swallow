@@ -107,8 +107,8 @@
 
 //自动加入可见的cell的indexpath
 +(void)autoAddVisibleItemsForMoveUpWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath{
-    NSMutableArray *arr = [array lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
+    //有可能是下滑完再上 滑
+    NSIndexPath *preIndexPath = (NSIndexPath *)array.lastObject;
     
     NSMutableArray *items = collectionView.indexPathsForVisibleItems.mutableCopy;
     //把可见的cell的indexpath进行排序
@@ -144,8 +144,10 @@
 }
 
 + (void)autoAddVisibleItemsForMoveDownWithArray:(NSMutableArray *)array collectionView:(UICollectionView *)collectionView originIndexPath:(NSIndexPath *)originIndexPath{
-    NSMutableArray *arr = [array lastObject];
-    NSIndexPath *preIndexPath = (NSIndexPath *)arr.lastObject;
+//    NSMutableArray *arr = [array lastObject];
+    
+    //有可能是上滑完再下滑
+    NSIndexPath *preIndexPath = (NSIndexPath *)array.lastObject;
     
     NSMutableArray *items = collectionView.indexPathsForVisibleItems.mutableCopy;
     //把可见的cell的indexpath进行排序
@@ -154,12 +156,24 @@
     }];
     for (NSInteger i = 0; i < items.count; i++) {
         NSIndexPath *index = items[i];
-        if (index.section >= originIndexPath.section ) {
+        if (index.section > originIndexPath.section ) {
             if (index.section == preIndexPath.section && index.row > preIndexPath.row) {
                 [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
             }else if (index.section > preIndexPath.section){
                 [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
             }
+        }else if (index.section == originIndexPath.section){
+            
+            if (index.row < originIndexPath.row) {
+                [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:collectionView fromArray:array];
+            }else if (index.row > originIndexPath.row){
+                [self addCellInLoopToCollectionView:collectionView WithIndex:index.row section:index.section array:array];
+            }
+            
+            
+            
+        }else{
+            [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:collectionView fromArray:array];
         }
     }
 }
