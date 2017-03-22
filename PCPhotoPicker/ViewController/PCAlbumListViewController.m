@@ -22,40 +22,39 @@
 @property (strong, nonatomic) UICollectionView *collectionView;
 @property (strong, nonatomic) NSMutableArray * assets;
 @property (assign, nonatomic) BOOL firstTimeMove;
-@property (strong, nonatomic) NSMutableArray * preIndexArr;
-@property (assign, nonatomic) CGPoint originLocation;
-@property (assign, nonatomic) CGPoint preLocation;
-@property (strong, nonatomic) NSMutableArray *selectedImgViewArr;
+@property (strong, nonatomic) NSMutableArray * preIndexArr;//前一次的index数组
+@property (assign, nonatomic) CGPoint originLocation;//最开始时手势的location
+//@property (assign, nonatomic) CGPoint preLocation;
+@property (strong, nonatomic) NSMutableArray *selectedImgViewArr;//选中的图片列表
 @property (strong, nonatomic) UIPanGestureRecognizer *panForCollection;
 //@property (strong, nonatomic) NSIndexPath *originIndexPath;
-@property (strong, nonatomic) UIButton *deleteBtn;
-@property (strong, nonatomic) UIButton *selectAllBtn;
-@property (strong, nonatomic) UIButton *cancelBtn;
-@property (strong, nonatomic) UIView *bottomView;
+@property (strong, nonatomic) UIButton *deleteBtn;//删除按钮
+@property (strong, nonatomic) UIButton *selectAllBtn;//全选
+@property (strong, nonatomic) UIButton *cancelBtn;//取消全选
+@property (strong, nonatomic) UIView *bottomView;//图片的底部视图
 
 @property (strong, nonatomic) UIView *bottomViewForTV;//相册的bottomview
-@property (strong, nonatomic) UIButton *createNewAlbumBtn;
-@property (strong, nonatomic) UIButton *editBtn;
+@property (strong, nonatomic) UIButton *createNewAlbumBtn;//创建新相册按钮
+@property (strong, nonatomic) UIButton *editBtn;//编辑相册按钮
 @property (strong, nonatomic) NSTimer *timer;
-@property (strong, nonatomic) PCAssetCell *originCell;
-@property (strong, nonatomic) NSIndexPath *originIndexPath;
+@property (strong, nonatomic) PCAssetCell *originCell;//最开始选中的cell
+@property (strong, nonatomic) NSIndexPath *originIndexPath;//最开始选中的cell的indexpath
 @property (assign, nonatomic) CGFloat originCellY;//originCell 的y坐标
 @property (assign, nonatomic) BOOL doneSelection;//选择过程结束
 
-@property (strong, nonatomic) NSString *nAlbumTitle;
+@property (strong, nonatomic) NSString *nAlbumTitle;//新相册的名称
 
-@property (assign, nonatomic) BOOL tableViewMoveUp;
-@property (assign, nonatomic) BOOL collectionViewMoveUp;
+@property (assign, nonatomic) BOOL tableViewMoveUp;//相册是否向上移动,在选中图片后，移动到tableview的底部或顶部时使用
+@property (assign, nonatomic) BOOL collectionViewMoveUp;//collectionview是否向上移动,在选中图片后，移动到collectionview的底部或顶部时使用
 
-@property (strong, nonatomic) ScrollBar *scrollBar;
-@property (assign, nonatomic) CGFloat realItemInterSpace;//两个item之间真实的距离
-@property (assign, nonatomic) BOOL rolling;
+@property (strong, nonatomic) ScrollBar *scrollBar;//滚动条
+@property (assign, nonatomic) BOOL rolling;//当选完图片后，移动到collectionveiw（或tableview）的底部或顶部时，rolling为真
 @property (assign, nonatomic) BOOL open;//collectionview的状态，展开
 @property (strong, nonatomic) NSMutableArray *stateForSectionArr;//每个section的状态的数组
-@property (strong, nonatomic) NSMutableArray *selectedAllForSectionArr;
-@property (strong, nonatomic) UIButton *sortBtn;
-@property (assign, nonatomic) BOOL tableDescending;//
-@property (strong, nonatomic) NSIndexPath *preMaxInd;//上一个最大的indexpath
+@property (strong, nonatomic) NSMutableArray *selectedAllForSectionArr;//保存每个section的状态，是收起还是展开
+@property (strong, nonatomic) UIButton *sortBtn;//对tableivew重新排序的按钮
+@property (assign, nonatomic) BOOL tableDescending;//tableview是否降序
+//@property (strong, nonatomic) NSIndexPath *preMaxInd;//上一个最大的indexpath
 @end
 
 static  NSString *PCAlbumListCellIdentifier = @"PCAlbumListCellIdentifier";
@@ -255,19 +254,12 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
     PCAlbumCell *cell = [tableView dequeueReusableCellWithIdentifier:PCAlbumListCellIdentifier forIndexPath:indexPath];
-    
     [cell configWithItem:_albums[indexPath.row]];
-    
-//    UILongPressGestureRecognizer *longPress = [[UILongPressGestureRecognizer alloc]initWithTarget:self action:@selector(longPress:)];
-//    longPress.minimumPressDuration = 1.0;
-    
     return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
-    
     if (_selectedIndexPathesForAssets.count > 0) {
-        
         [_selectedIndexPathesForAssets removeAllObjects];
     }
     [_collectionView setContentOffset:CGPointMake(0, 0)];
@@ -300,7 +292,6 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                                                                     title:@"删除"
                                                                   handler:^(UITableViewRowAction * _Nonnull action, NSIndexPath * _Nonnull indexPath) {
                                                                       NSError *err = nil;
-//                                                                      [[PHPhotoLibrary sharedPhotoLibrary] registerChangeObserver:self];
                                                                       [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
                                                                           PCAlbumModel *model = _albums[indexPath.row];
                                                                           [PHAssetCollectionChangeRequest deleteAssetCollections:@[model.collection]];
@@ -331,7 +322,6 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     NSDictionary *dict = _assets[section];
     NSArray *arr = dict[@"assets"];
     if (_open) {
-        
         return arr.count;
     }else{
         NSString *state = _stateForSectionArr[section];
@@ -350,13 +340,13 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     cell.indexPath = indexPath;
     cell.delegate = self;
     
-    if (indexPath.row == 1) {
-        NSIndexPath *preIndexPath = [NSIndexPath indexPathForRow:0 inSection:indexPath.section];
-        PCAssetCell *preCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:preIndexPath];
-        if (preCell) {
-            _realItemInterSpace = cell.frame.origin.x - (preCell.frame.origin.x + preCell.frame.size.width);
-        }
-    }
+//    if (indexPath.row == 1) {
+//        NSIndexPath *preIndexPath = [NSIndexPath indexPathForRow:0 inSection:indexPath.section];
+//        PCAssetCell *preCell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:preIndexPath];
+//        if (preCell) {
+//            _realItemInterSpace = cell.frame.origin.x - (preCell.frame.origin.x + preCell.frame.size.width);
+//        }
+//    }
     
     NSDictionary *dict = _assets[indexPath.section];
     NSArray *arr = dict[@"assets"];
@@ -385,8 +375,6 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 - (UICollectionReusableView *)collectionView:(UICollectionView *)collectionView viewForSupplementaryElementOfKind:(NSString *)kind atIndexPath:(NSIndexPath *)indexPath{
     if (kind == UICollectionElementKindSectionHeader) {
-//        NSLog(@"indexarr:%@",collectionView.indexPathsForVisibleItems);
-//        NSLog(@"index section:%ld",indexPath.section);
         PCCollectionReusableHeaderView *header = [collectionView dequeueReusableSupplementaryViewOfKind:UICollectionElementKindSectionHeader
                                                                               withReuseIdentifier:headerIdentifier
                                                                                      forIndexPath:indexPath];
@@ -407,674 +395,170 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 
 //第四象限
 - (void)handlerForForthQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-    
-//    NSLog(@"here");
-    //从第一象限进入
-    NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
-    if (preIndexPath.section <_originIndexPath.section ) {
-        
-        
-        NSDictionary *dict = _assets[preIndexPath.section];
-        NSArray *preSectionArr = dict[@"assets"];
-        for (NSInteger i = preSectionArr.count - 1; i >= 0; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-        
-       
-        for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-        
-    }else if (preIndexPath.section == _originIndexPath.section && preIndexPath.row < _originIndexPath.row){
-        for (NSInteger i = _originIndexPath.row - 1; i >= 0; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-    }
-    
-    
-    
-    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y);
-    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
-    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
-    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
-    NSArray *sorts = @[s1,s2];
-    [arr sortUsingDescriptors:sorts];
-    
-    NSIndexPath *currentIndexPath = nil;
+
+    NSMutableArray *arr = [Tool layoutAttributesArrWithOriginLocation:_originLocation currentLocation:currentLocation collectionView:_collectionView];
     if (arr.count > 0) {
-//    NSLog(@"arr:%@",arr);
-        NSMutableArray *group = [self groupFromAttributeArr:arr];
-//        NSLog(@"grouP:%@",group);
+        NSMutableArray *group = [Tool groupFromAttributeArr:arr];
         NSMutableArray *lastPart = group.lastObject;
         UICollectionViewLayoutAttributes *att = lastPart.lastObject;
-        if (att.representedElementCategory == 1) {
-            currentIndexPath = att.indexPath;
-        }else if(att.representedElementCategory == 0){
-            //归类
-            NSMutableArray *lastSectionGroup = group.lastObject;
-            NSMutableArray *divGroup = [[NSMutableArray alloc]init];
-            UICollectionViewLayoutAttributes *index = lastSectionGroup.firstObject;
-            NSMutableArray *first = [[NSMutableArray alloc]init];
-            if (index.representedElementCategory == 1) {
-                index = lastSectionGroup[1];
-            }
-            
-            [first addObject:index];
-            [divGroup addObject:first];
-            NSInteger remainder = index.indexPath.row/numberPerLine;
-            for (NSInteger i = 1; i< lastSectionGroup.count; i++) {
-                UICollectionViewLayoutAttributes *temp = lastSectionGroup[i];
-                if (temp.indexPath.row / numberPerLine == remainder) {
-                    NSMutableArray *element = [divGroup lastObject];
-                    [element addObject:temp];
-                }else if(temp.indexPath.row / numberPerLine > remainder){
-                    if (temp.representedElementCategory == 0) {
-                        remainder = temp.indexPath.row / numberPerLine;
-                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
-                        [nextElement addObject:temp];
-                        [divGroup addObject:nextElement];
-                    }
-                    
-                }
-                
-            }
-            
-            NSMutableArray *lastPart = divGroup.lastObject;
-            UICollectionViewLayoutAttributes *firstAtt = lastPart.lastObject;
-            currentIndexPath = firstAtt.indexPath;
-            //            NSLog(@"divgrouP:%@",divGroup );
-        }
-        
-        
-        if (currentIndexPath.section == _originIndexPath.section && currentIndexPath.row > _originIndexPath.row) {
-            //从第一象限进入时，有时没选上
-            for (NSInteger i = _originIndexPath.row; i <= currentIndexPath.row; i++) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-            }
-            
-           
-            for (NSInteger i = _originIndexPath.row - 1;i >= 0 ; i--) {
-                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-            }
-        }
-        
-        
+
+        NSIndexPath *currentIndexPath = [Tool currentIndexPathForForthQuadrantWithGroup:group numberPerLine:numberPerLine];
+         NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
+        //前期处理
+        [Tool preHandlerForForthQuadrantWithOriginIndexPath:_originIndexPath
+                                           currentIndexPath:currentIndexPath
+                                               preIndexPath:preIndexPath
+                                             collectionView:_collectionView
+                                           selectedIndexArr:_selectedIndexPathesForAssets
+                                                     assets:_assets];
         if (arr.count > _preIndexArr.count) {
             // 增加
-            //            NSLog(@"indx:%@|",currentIndexPath);
-            
-            if (group.count == 1) {
-                //只有一个section
-                
-                if (currentIndexPath.row > _originIndexPath.row) {
-                    for (NSInteger i = _originIndexPath.row; i <= currentIndexPath.row; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                    
-                    for (NSInteger i = 0; i < _originIndexPath.row; i++) {
-                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                }
-                
-                
-                
-            }else if (group.count > 1){
-                // 多个section
-                //处理原始section
-                NSDictionary *dict = _assets[_originIndexPath.section];
-                NSArray *currentSectionArr = dict[@"assets"];
-                for (NSInteger i = _originIndexPath.row; i <currentSectionArr.count; i++) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-                
-                for (NSInteger i = 0; i < _originIndexPath.row; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                
-                //处理中间的section
-                for (NSInteger i = 1; i < group.count - 1; i++) {
-                    NSMutableArray *midPart = group[i];
-                    UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
-                    NSDictionary *dict = _assets[firstAtt.indexPath.section];
-                    NSArray *midSectionArr = dict[@"assets"];
-                    for ( NSInteger i = midSectionArr.count - 1; i>= 0; i--) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }
-                
-                //处理最后一个section
-                
-                if (att.representedElementCategory == 0) {
-                    //进到cell，
-                    for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }
-                
-            }
+            [Tool handlerForForthQuadrantInAddingWithIndexArr:group
+                                             currentIndexPath:currentIndexPath
+                                                 preIndexPath:preIndexPath
+                                              originIndexPath:_originIndexPath
+                                               collectionView:_collectionView
+                                             selectedIndexArr:_selectedIndexPathesForAssets
+                                                       assets:_assets
+                                          lastLayoutAttribute:att];
         }else if (arr.count < _preIndexArr.count){
-            
             //减少
-            NSArray *indexArr = [_collectionView indexPathsForVisibleItems];
-            for (NSInteger i = 0 ; i < indexArr.count; i++) {
-                NSIndexPath *index = indexArr[i];
-                if (index.section > currentIndexPath.section) {
-                    [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }else if (index.section == currentIndexPath.section) {
-                    if (att.representedElementCategory == 0) {
-                        if (index.row > currentIndexPath.row) {
-                            [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                        }
-                    }else if (att.representedElementCategory == 1){
-                        //进入headerveiw
-                        if (index.row >= currentIndexPath.row) {
-                            [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                        }
-                    }
-  
-                }
-            }
+            [Tool handlerForForthQuadrantInSubtractionWithIndexArr:group
+                                                  currentIndexPath:currentIndexPath
+                                                      preIndexPath:preIndexPath
+                                                   originIndexPath:_originIndexPath
+                                                    collectionView:_collectionView
+                                                  selectedIndexArr:_selectedIndexPathesForAssets
+                                                            assets:_assets
+                                               lastLayoutAttribute:att];
         }
-        _preIndexArr = arr;
     }
+    _preIndexArr = arr;
 }
 // 第一象限
 - (void)handlerForFirstQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-//    _preMaxInd = _originIndexPath;
-    NSLog(@"there");
-    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
-    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
- 
-
-    
-    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
-    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
-    NSArray *sorts = @[s1,s2];
-    [arr sortUsingDescriptors:sorts];
-    
-    NSIndexPath *currentIndexPath = nil;
-    NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
-   
-    
+    NSMutableArray *arr = [Tool layoutAttributesArrWithOriginLocation:_originLocation currentLocation:currentLocation collectionView:_collectionView];
     if (arr.count > 0) {
-//        NSLog(@"arr:%@",arr);
-        NSMutableArray *group = [self groupFromAttributeArr:arr];
-        NSMutableArray *firstPart = group[0];
-        UICollectionViewLayoutAttributes *att = firstPart.firstObject;
-        if (att.representedElementCategory == 1) {
-            currentIndexPath = att.indexPath;
-        }else if(att.representedElementCategory == 0){
-            //归类
-            NSMutableArray *firstSectionGroup = group[0];
-            NSMutableArray *divGroup = [[NSMutableArray alloc]init];
-            UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
-            NSMutableArray *first = [[NSMutableArray alloc]init];
-            [first addObject:index];
-            [divGroup addObject:first];
-            NSInteger remainder = index.indexPath.row/numberPerLine;
-            for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
-                UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
-                if (temp.indexPath.row / numberPerLine == remainder) {
-                    NSMutableArray *element = [divGroup lastObject];
-                    [element addObject:temp];
-                }else if(temp.indexPath.row / numberPerLine > remainder){
-                    remainder = temp.indexPath.row / numberPerLine;
-                    NSMutableArray *nextElement = [[NSMutableArray alloc]init];
-                    [nextElement addObject:temp];
-                    [divGroup addObject:nextElement];
-                }
-                
-            }
-            
-            NSMutableArray *firstPart = divGroup[0];
-            UICollectionViewLayoutAttributes *firstAtt = firstPart.lastObject;
-            currentIndexPath = firstAtt.indexPath;
-        }
-        NSLog(@"curr:%@",currentIndexPath);
+        NSMutableArray *group = [Tool groupFromAttributeArr:arr];
+        NSMutableArray *lastPart = group.lastObject;
+        UICollectionViewLayoutAttributes *att = lastPart.lastObject;
+        NSIndexPath *currentIndexPath = [Tool currentIndexPathForFirstQuadrantWithGroup:group numberPerLine:numberPerLine];
+        NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
         
+        [Tool preHandlerForFirstQuadrantWithOriginIndexPath:_originIndexPath
+                                           currentIndexPath:currentIndexPath
+                                               preIndexPath:preIndexPath
+                                             collectionView:_collectionView
+                                           selectedIndexArr:_selectedIndexPathesForAssets];
         
          if (currentIndexPath.section < preIndexPath.section || ( currentIndexPath.section == preIndexPath.section &&  currentIndexPath.row < preIndexPath.row)) {
              // 增加
-             if (group.count == 1) {
-                 if (currentIndexPath.row < _originIndexPath.row) {
-                     for (NSInteger i = _originIndexPath.row; i >= currentIndexPath.row; i--) {
-                         [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                     }
-                     NSDictionary *dict = _assets[_originIndexPath.section];
-                     NSArray *currentSectionArr = dict[@"assets"];
-                     for (NSInteger i = currentSectionArr.count - 1; i > _originIndexPath.row; i--) {
-                         [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                     }
-                     
-                     
-                     
-                 }
-                 
-                 
-                 
-                 
-                 
-             }else if (group.count >1){
-                 //
-                 //处理原始section
-                 for (NSInteger i = _originIndexPath.row; i >= 0; i--) {
-                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                 }
-                 NSDictionary *dict = _assets[_originIndexPath.section];
-                 NSArray *currentSectionArr = dict[@"assets"];
-                 for (NSInteger i = currentSectionArr.count - 1; i > _originIndexPath.row; i--) {
-                     [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                 }
-                 
-                 
-                 //处理中间的section
-                 for (NSInteger i = 1; i < group.count - 1; i++) {
-                     NSMutableArray *midPart = group[i];
-                     UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
-                     NSDictionary *dict = _assets[firstAtt.indexPath.section];
-                     NSArray *midSectionArr = dict[@"assets"];
-                     for ( NSInteger i = 0; i< midSectionArr.count; i++) {
-                         [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                     }
-                     
-                 }
-                 
-                 //处理第一个section
-                 NSMutableArray *firstPart = group[0];
-                 UICollectionViewLayoutAttributes *firstAtt = firstPart.firstObject;
-                 NSDictionary *firstDict = _assets[firstAtt.indexPath.section];
-                 NSArray *firstSectionArr = firstDict[@"assets"];
-                 for ( NSInteger i = firstSectionArr.count - 1; i>= currentIndexPath.row; i--) {
-                     [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                 }
-                 
-             }
-             
+             [Tool handlerForFirstQuadrantInAddingWithIndexArr:group
+                                              currentIndexPath:currentIndexPath
+                                                  preIndexPath:preIndexPath
+                                               originIndexPath:_originIndexPath
+                                                collectionView:_collectionView
+                                              selectedIndexArr:_selectedIndexPathesForAssets
+                                                        assets:_assets];
          }else if (currentIndexPath.section > preIndexPath.section || ( currentIndexPath.section == preIndexPath.section &&  currentIndexPath.row > preIndexPath.row)){
-             
-             if (currentIndexPath.section == _originIndexPath.section && currentIndexPath.row > _originIndexPath.row) {
-                 NSLog(@"diu");
-                 return;
-             }
-             NSArray *indexArr = [_collectionView indexPathsForVisibleItems];
-             for (NSInteger i = 0 ; i < indexArr.count; i++) {
-                 NSIndexPath *index = indexArr[i];
-                 if (index.section < currentIndexPath.section) {
-                     [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                 }else if (index.section == currentIndexPath.section) {
-                     if (index.row < currentIndexPath.row) {
-                         [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                     }
-                     
-                     
-                     
-                 }
-             }
-             
-             
-             
+             //减少
+             [Tool handlerForFirstQuadrantInSubtractionWithIndexArr:group
+                                                   currentIndexPath:currentIndexPath
+                                                       preIndexPath:preIndexPath
+                                                    originIndexPath:_originIndexPath
+                                                     collectionView:_collectionView
+                                                   selectedIndexArr:_selectedIndexPathesForAssets
+                                                             assets:_assets
+                                                lastLayoutAttribute:att];
          }
-        
-    
     }
  _preIndexArr = arr;
     
     
 }
+
+//第二象限
+
+- (void)handlerForSecondQuadrantWithCurrentLocation:(CGPoint)currentLocation{
+    NSMutableArray *arr = [Tool layoutAttributesArrWithOriginLocation:_originLocation currentLocation:currentLocation collectionView:_collectionView];
+    
+    if (arr.count > 0) {
+        NSMutableArray *group = [Tool groupFromAttributeArr:arr];
+        NSMutableArray *lastPart = group.lastObject;
+        UICollectionViewLayoutAttributes *att = lastPart.lastObject;
+        NSIndexPath *currentIndexPath = [Tool currentIndexPathForSecQuadrantWithGroup:group numberPerLine:numberPerLine];
+        NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
+        [Tool preHandlerForSecondQuadrantOriginIndexPath:_originIndexPath
+                                        currentIndexPath:currentIndexPath
+                                            preIndexPath:preIndexPath
+                                          collectionView:_collectionView
+                                        selectedIndexArr:_selectedIndexPathesForAssets
+                                                  assets:_assets];
+        if (arr.count > _preIndexArr.count) {
+            // 增加
+            [Tool handlerForSecondQuadrantInAddingWithIndexArr:group
+                                              currentIndexPath:currentIndexPath
+                                                  preIndexPath:preIndexPath
+                                               originIndexPath:_originIndexPath
+                                                collectionView:_collectionView
+                                              selectedIndexArr:_selectedIndexPathesForAssets
+                                                        assets:_assets];
+        }else if(arr.count < _preIndexArr.count){
+            //减少
+            [Tool handlerForSecondQuadrantInSubtractionWithIndexArr:group
+                                                   currentIndexPath:currentIndexPath
+                                                       preIndexPath:preIndexPath
+                                                    originIndexPath:_originIndexPath
+                                                     collectionView:_collectionView
+                                                   selectedIndexArr:_selectedIndexPathesForAssets
+                                                             assets:_assets
+                                                lastLayoutAttribute:att];
+        }
+    }
+    _preIndexArr = arr;
+}
+
+
+
 //第三象限
 
 - (void)handlerForThirdQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-
-    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y);
-    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
-    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
-    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
-    NSArray *sorts = @[s1,s2];
-    [arr sortUsingDescriptors:sorts];
-    
-    NSIndexPath *currentIndexPath = nil;
+    NSMutableArray *arr = [Tool layoutAttributesArrWithOriginLocation:_originLocation currentLocation:currentLocation collectionView:_collectionView];
     if (arr.count > 0) {
-//        NSLog(@"arr:%@",arr);
         //先按section进行分类
-       NSMutableArray *group = [self groupFromAttributeArr:arr];
+       NSMutableArray *group = [Tool groupFromAttributeArr:arr];
         
         NSMutableArray *lastPart = group.lastObject;
         UICollectionViewLayoutAttributes *att = lastPart.lastObject;
-        if (att.representedElementCategory == 1) {
-            currentIndexPath = att.indexPath;
-        }else if(att.representedElementCategory == 0){
-            //归类
-            NSMutableArray *lastSectionGroup = group.lastObject;
-            NSMutableArray *divGroup = [[NSMutableArray alloc]init];
-            UICollectionViewLayoutAttributes *index = lastSectionGroup.firstObject;
-             NSMutableArray *first = [[NSMutableArray alloc]init];
-            if (index.representedElementCategory == 1) {
-                index = lastSectionGroup[1];
-            }
-           
-            [first addObject:index];
-            [divGroup addObject:first];
-            NSInteger remainder = index.indexPath.row/numberPerLine;
-            for (NSInteger i = 1; i< lastSectionGroup.count; i++) {
-                UICollectionViewLayoutAttributes *temp = lastSectionGroup[i];
-                if (temp.indexPath.row / numberPerLine == remainder) {
-                    NSMutableArray *element = [divGroup lastObject];
-                    [element addObject:temp];
-                }else if(temp.indexPath.row / numberPerLine > remainder){
-                    if (temp.representedElementCategory == 0) {
-                        remainder = temp.indexPath.row / numberPerLine;
-                        NSMutableArray *nextElement = [[NSMutableArray alloc]init];
-                        [nextElement addObject:temp];
-                        [divGroup addObject:nextElement];
-                    }
-                   
-                }
-                
-            }
-            
-            NSMutableArray *lastPart = divGroup.lastObject;
-            UICollectionViewLayoutAttributes *firstAtt = lastPart.firstObject;
-            currentIndexPath = firstAtt.indexPath;
-//            NSLog(@"divgrouP:%@",divGroup );
-        }
+        NSIndexPath *currentIndexPath = [Tool currentIndexPathForThirdQuadrantWithGroup:group numberPerLine:numberPerLine];
         NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
-        
-      
-        
-        
-        
         //判断是增加还是减少
-       
-//        NSLog(@"curindex:%@ preindex:%@",currentIndexPath,preIndexPath);
-//        NSLog(@"group:%@",group);
         if (currentIndexPath.section > preIndexPath.section || ( currentIndexPath.section == preIndexPath.section &&  currentIndexPath.row > preIndexPath.row)) {
             //增加
-            if (group.count ==1 ) {
-                //只有一个section
-                if (currentIndexPath.row > _originIndexPath.row) {
-                    for (NSInteger i = _originIndexPath.row; i <= currentIndexPath.row; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                
-                
-                
-                    for (NSInteger i = 0; i <_originIndexPath.row; i++) {
-                        [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                }
-            }else if (group.count > 1){
-                //包含多个section
-                //处理原始section
-                NSDictionary *dict = _assets[_originIndexPath.section];
-                NSArray *currentSectionArr = dict[@"assets"];
-                for (NSInteger i = _originIndexPath.row; i < currentSectionArr.count; i++) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-                for (NSInteger i = 0; i <_originIndexPath.row; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                
-                //处理中间的section
-                for (NSInteger i = 1; i < group.count - 1; i++) {
-                    NSMutableArray *midPart = group[i];
-                    UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
-                    NSDictionary *dict = _assets[firstAtt.indexPath.section];
-                    NSArray *midSectionArr = dict[@"assets"];
-                    for ( NSInteger i = 0; i< midSectionArr.count; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                    
-                }
-                
-                
-                //处理最后的section
-                if (att.representedElementCategory == 0) {
-                    for (NSInteger i = 0; i <= currentIndexPath.row; i++) {
-                        [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:currentIndexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }
-            }
-            
+            [Tool handlerForThirdQuadrantInAddingWithIndexArr:group
+                                             currentIndexPath:currentIndexPath
+                                                 preIndexPath:preIndexPath
+                                              originIndexPath:_originIndexPath
+                                               collectionView:_collectionView
+                                             selectedIndexArr:_selectedIndexPathesForAssets
+                                                       assets:_assets
+                                          lastLayoutAttribute:att];
             
         }else{
-            if(currentIndexPath.section < preIndexPath.section || ( currentIndexPath.section == preIndexPath.section &&  currentIndexPath.row < preIndexPath.row)){
-                NSArray *indexArr = [_collectionView indexPathsForVisibleItems];
-                for (NSInteger i = 0 ; i < indexArr.count; i++) {
-                    NSIndexPath *index = indexArr[i];
-                    if (index.section > currentIndexPath.section) {
-                        [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }else if (index.section == currentIndexPath.section){
-                        
-                        if (currentIndexPath.section == _originIndexPath.section && currentIndexPath.row < _originIndexPath.row) {
-                            return;
-                            
-                            
-                            
-                            
-                        }
-                        
-                        NSDictionary *dict = _assets[currentIndexPath.section];
-                        NSArray *currentSectionArr = dict[@"assets"];
-                        //                     if (att.representedElementCategory == 0) {
-                        
-                        for (NSInteger i = currentSectionArr.count - 1; i > currentIndexPath.row; i--) {
-                            [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                        }
-                      
-                        
-                        
-                        
-                    }
-                    
-                    
-                }
-            } else if (currentIndexPath.section == preIndexPath.section &&  currentIndexPath.row == preIndexPath.row){
-                
-                //            //向上滑到headerview，此时currentindexpath 的row是0，preindexpath的row 也是0
-                NSDictionary *dict = _assets[currentIndexPath.section];
-                NSArray *currentSectionArr = dict[@"assets"];
-                //
-                if (att.representedElementCategory == 1){
-                    for (NSInteger i = currentSectionArr.count - 1; i >=0; i--) {
-                        [Tool removeCellsInLoopWithIndex:i section:currentIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                }
-            }
+            [Tool handlerForThirdQuadrantInSubtractionWithCollectionView:_collectionView
+                                                        currentIndexPath:currentIndexPath
+                                                            preIndexPath:preIndexPath
+                                                        selectedIndexArr:_selectedIndexPathesForAssets
+                                                         originIndexPath:_originIndexPath
+                                                                  assets:_assets
+                                                     lastLayoutAttribute:att];
         }
     }
      _preIndexArr = arr;
 }
 
 
-//第二象限
 
-- (void)handlerForSecondQuadrantWithCurrentLocation:(CGPoint)currentLocation{
-    //先把其他的清楚
-    //从第三象限进入
-NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
-    if (preIndexPath.section > _originIndexPath.section ) {
-        
-        
-        NSDictionary *dict = _assets[preIndexPath.section];
-        NSArray *preSectionArr = dict[@"assets"];
-        for (NSInteger i = preSectionArr.count - 1; i >= 0; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:preIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-        
-        dict = _assets[_originIndexPath.section];
-        NSArray *oriSectionArr = dict[@"assets"];
-        for (NSInteger i = oriSectionArr.count - 1; i > _originIndexPath.row; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-        
-    }else if (preIndexPath.section == _originIndexPath.section && preIndexPath.row > _originIndexPath.row){
-        NSDictionary *dict = _assets[_originIndexPath.section];
-        NSArray *oriSectionArr = dict[@"assets"];
-        for (NSInteger i = oriSectionArr.count - 1; i > _originIndexPath.row; i--) {
-            [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-        }
-    }
-    
-    
-    
-    CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
-    NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
-    
-    
-    
-    NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
-    NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
-    NSArray *sorts = @[s1,s2];
-    [arr sortUsingDescriptors:sorts];
-    
-    NSIndexPath *currentIndexPath = nil;
-    
-    
-    
-    if (arr.count > 0) {
-        
-       
-        NSMutableArray *group = [self groupFromAttributeArr:arr];
-        NSMutableArray *firstPart = group[0];
-        UICollectionViewLayoutAttributes *att = firstPart.firstObject;
-        if (att.representedElementCategory == 1) {
-            currentIndexPath = att.indexPath;
-        }else if(att.representedElementCategory == 0){
-            //归类
-            NSMutableArray *firstSectionGroup = group[0];
-            NSMutableArray *divGroup = [[NSMutableArray alloc]init];
-            UICollectionViewLayoutAttributes *index = firstSectionGroup[0];
-            NSMutableArray *first = [[NSMutableArray alloc]init];
-            [first addObject:index];
-            [divGroup addObject:first];
-            NSInteger remainder = index.indexPath.row/numberPerLine;
-            for (NSInteger i = 1; i< firstSectionGroup.count; i++) {
-                UICollectionViewLayoutAttributes *temp = firstSectionGroup[i];
-                if (temp.indexPath.row / numberPerLine == remainder) {
-                    NSMutableArray *element = [divGroup lastObject];
-                    [element addObject:temp];
-                }else if(temp.indexPath.row / numberPerLine > remainder){
-                    remainder = temp.indexPath.row / numberPerLine;
-                    NSMutableArray *nextElement = [[NSMutableArray alloc]init];
-                    [nextElement addObject:temp];
-                    [divGroup addObject:nextElement];
-                }
-                
-            }
-            
-            NSMutableArray *firstPart = divGroup[0];
-            UICollectionViewLayoutAttributes *firstAtt = firstPart.firstObject;
-            currentIndexPath = firstAtt.indexPath;
-        }
-//        NSLog(@"indx:%@|",currentIndexPath);
-        
-        if (currentIndexPath.section == _originIndexPath.section && currentIndexPath.row < _originIndexPath.row) {
-            //从第三象限进入时，有时没选上
-            for (NSInteger i = _originIndexPath.row; i >= currentIndexPath.row; i--) {
-                [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-            }
-            
-            NSDictionary *dict = _assets[_originIndexPath.section];
-            NSArray *currentSectionArr = dict[@"assets"];
-            for (NSInteger i = _originIndexPath.row + 1;i < currentSectionArr.count ; i++) {
-                [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-            }
-        }
-//        NSLog(@"group:%@",group);
-        if (arr.count > _preIndexArr.count) {
-            // 增加
-            
-            
-            if (group.count == 1) {
-                //只有一个section 理论上是原始section
-                for (NSInteger i = _originIndexPath.row; i >= currentIndexPath.row; i--) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-                
-                NSDictionary *dict = _assets[_originIndexPath.section];
-                NSArray *currentSectionArr = dict[@"assets"];
-                for (NSInteger i = _originIndexPath.row + 1;i < currentSectionArr.count ; i++) {
-                    [Tool removeCellsInLoopWithIndex:i section:_originIndexPath.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }
-                
-                
-                
-            }else if (group.count >1){
-                //多个section
-                //处理原始section
-                for (NSInteger i = _originIndexPath.row; i >= 0; i--) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:_originIndexPath.section array:_selectedIndexPathesForAssets];
-                }
-                
-                //处理中间的section
-                for (NSInteger i = 1; i < group.count - 1; i++) {
-                    NSMutableArray *midPart = group[i];
-                    UICollectionViewLayoutAttributes *firstAtt = midPart.firstObject;
-                    NSDictionary *dict = _assets[firstAtt.indexPath.section];
-                    NSArray *midSectionArr = dict[@"assets"];
-                    for ( NSInteger i = midSectionArr.count - 1; i>= 0; i--) {
-                         [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                    }
-                }
-                //处理第一个section
-                NSMutableArray *firstPart = group[0];
-                UICollectionViewLayoutAttributes *firstAtt = firstPart.firstObject;
-                NSDictionary *dict = _assets[firstAtt.indexPath.section];
-                NSArray *firstSectionArr = dict[@"assets"];
-                for ( NSInteger i = firstSectionArr.count - 1; i>= currentIndexPath.row; i--) {
-                    [Tool addCellInLoopToCollectionView:_collectionView WithIndex:i section:firstAtt.indexPath.section array:_selectedIndexPathesForAssets];
-                }
-
-                
-            }
-        
-
-        }else if(arr.count < _preIndexArr.count){
-            //减少
-            NSArray *indexArr = [_collectionView indexPathsForVisibleItems];
-            for (NSInteger i = 0 ; i < indexArr.count; i++) {
-                NSIndexPath *index = indexArr[i];
-                if (index.section < currentIndexPath.section) {
-                    [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                }else if (index.section == currentIndexPath.section) {
-                    if (index.row < currentIndexPath.row) {
-                        [Tool removeCellsInLoopWithIndex:index.row section:index.section collectionView:_collectionView fromArray:_selectedIndexPathesForAssets];
-                    }
-                    
-                    
-                    
-                }
-            }
-            
-
-        }
-        
-    }
-    _preIndexArr = arr;
-}
-
-//先按section进行分类
-- (NSMutableArray *)groupFromAttributeArr:(NSMutableArray *)arr{
-    NSMutableArray *group = [[NSMutableArray alloc]init];
-    UICollectionViewLayoutAttributes *index = arr[0];
-    NSMutableArray *firt = [[NSMutableArray alloc]init];
-    [firt addObject:index];
-    [group addObject:firt];
-    NSInteger section = index.indexPath.section;
-    for (NSInteger i = 1; i < arr.count; i++) {
-        UICollectionViewLayoutAttributes *temp = arr[i];
-        if (temp.indexPath.section == section) {
-            NSMutableArray *element = group.lastObject;
-            [element addObject:temp];
-        }else if (temp.indexPath.section > section){
-            section = temp.indexPath.section;
-            NSMutableArray *nextElement = [[NSMutableArray alloc]init];
-            [nextElement addObject:temp];
-            [group addObject:nextElement];
-        }
-    }
-    return group;
-}
 
 
 //选择结束后，开始拖动
@@ -1085,25 +569,23 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
     }
     
     if (_selectedIndexPathesForAssets.count > 0) {
-//        for (NSArray *arr in _selectedIndexPathesForAssets) {
-            for ( int i = 0; i < _selectedIndexPathesForAssets.count ; i++) {
-                NSIndexPath *index = _selectedIndexPathesForAssets[i];
-                PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
-                cell.alpha = 0.2;
-                if (i <= 15) { 
-                    CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y - _collectionView.contentOffset.y);
-                    UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , itemCellWidth, itemCellWidth)];
-                    NSDictionary *dict = _assets[index.section];
-                    NSArray *assets = dict[@"assets"];
-                    PCAssetModel *asset = assets[index.row];
-                    
-                    imgV.image = asset.thumbnail;
-                    imgV.hidden = NO;
-                    [_selectedImgViewArr addObject:imgV];
-                    [self.view addSubview:imgV];
-                }
+        for ( int i = 0; i < _selectedIndexPathesForAssets.count ; i++) {
+            NSIndexPath *index = _selectedIndexPathesForAssets[i];
+            PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
+            cell.alpha = 0.2;
+            if (i <= 15) { 
+                CGPoint cellCenter = CGPointMake(cell.frame.origin.x, cell.frame.origin.y - _collectionView.contentOffset.y);
+                UIImageView *imgV = [[UIImageView alloc]initWithFrame:CGRectMake(cellCenter.x + _collectionView.frame.origin.x + 5, cellCenter.y + _collectionView.frame.origin.y - 5 , itemCellWidth, itemCellWidth)];
+                NSDictionary *dict = _assets[index.section];
+                NSArray *assets = dict[@"assets"];
+                PCAssetModel *asset = assets[index.row];
+                
+                imgV.image = asset.thumbnail;
+                imgV.hidden = NO;
+                [_selectedImgViewArr addObject:imgV];
+                [self.view addSubview:imgV];
             }
-//        }
+        }
     }
 }
 //选择结束后，开始拖动，pan手势的change阶段
@@ -1159,36 +641,32 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
         NSIndexPath *indexPath = [_tableView indexPathForRowAtPoint:point];
         PCAlbumModel *model = _albums[indexPath.row];
         
-//        for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
-//            NSArray *arr = _selectedIndexPathesForAssets[i];
-            for (int j = 0; j < _selectedIndexPathesForAssets.count; j++) {
-                NSIndexPath *ind = _selectedIndexPathesForAssets[j];
-                
-                NSDictionary *dict = _assets[ind.section];
-                NSArray *assets = dict[@"assets"];
-                PCAssetModel *assetModel = assets[ind.row];
-                
-                PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:ind];
-                if (cell) {
-                    cell.alpha = 1.0;
-                }
-                
-                PHAsset * asset = assetModel.asset;
-                if (asset) {
-                    NSError *err = nil;
-                    [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
-                        PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
-                        [request insertAssets:@[asset] atIndexes:[NSIndexSet indexSetWithIndex:0]];
-                    } error:&err];
-                    if (!err) {
-                        NSLog(@"success savedd");
-                        //                    _selectedImgV.hidden = YES;
-                    }else{
-                        NSLog(@"save fail");
-                    }
+        for (int j = 0; j < _selectedIndexPathesForAssets.count; j++) {
+            NSIndexPath *ind = _selectedIndexPathesForAssets[j];
+            
+            NSDictionary *dict = _assets[ind.section];
+            NSArray *assets = dict[@"assets"];
+            PCAssetModel *assetModel = assets[ind.row];
+            
+            PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:ind];
+            if (cell) {
+                cell.alpha = 1.0;
+            }
+            
+            PHAsset * asset = assetModel.asset;
+            if (asset) {
+                NSError *err = nil;
+                [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
+                    PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
+                    [request insertAssets:@[asset] atIndexes:[NSIndexSet indexSetWithIndex:0]];
+                } error:&err];
+                if (!err) {
+                    NSLog(@"success savedd");
+                }else{
+                    NSLog(@"save fail");
                 }
             }
-//        }
+        }
         for (UIImageView *imgV in _selectedImgViewArr) {
             imgV.hidden = YES;
         }
@@ -1202,14 +680,11 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
         [_collectionView reloadData];
         [_selectedIndexPathesForAssets removeAllObjects];
     }else{
-//        for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
-//            NSArray *arr = _selectedIndexPathesForAssets[i];
-            for (int j = 0; j < _selectedIndexPathesForAssets.count; j++) {
-                NSIndexPath *index = _selectedIndexPathesForAssets[j];
-                PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
-                cell.alpha = 1.0;
-            }
-//        }
+        for (int j = 0; j < _selectedIndexPathesForAssets.count; j++) {
+            NSIndexPath *index = _selectedIndexPathesForAssets[j];
+            PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
+            cell.alpha = 1.0;
+        }
         for (UIImageView *imgV in _selectedImgViewArr) {
             imgV.hidden = YES;
         }
@@ -1220,11 +695,9 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
 
 - (void)currentLocationDidChange:(CGPoint)currentLocation{
     if (_firstTimeMove) {
+        //第一次滑动选择时的index数组
         CGRect rect = CGRectMake(_originLocation.x, _originLocation.y,  currentLocation.x - _originLocation.x,  currentLocation.y - _originLocation.y    );
         NSMutableArray *arr = [_collectionView.collectionViewLayout layoutAttributesForElementsInRect:rect].mutableCopy;
-        
-        
-        
         NSSortDescriptor *s1 = [NSSortDescriptor sortDescriptorWithKey:@"indexPath" ascending:YES];
         NSSortDescriptor *s2 = [NSSortDescriptor sortDescriptorWithKey:@"representedElementCategory" ascending:NO];
         NSArray *sorts = @[s1,s2];
@@ -1238,8 +711,6 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
         if (currentLocation.x >= _originLocation.x ) {
             //如果y坐标大于起始cell的y坐标，处于第四象限,否则，处于第一象限（注意不是起始y坐标，因为起始的y坐标是大于起始cell的y坐标的，即使比起始y坐标小也有可能处于第四象限， ）
             if (currentLocation.y >= _originCellY ) {
-                //                    NSLog(@"forth");
-                
                 [self handlerForForthQuadrantWithCurrentLocation:currentLocation];
             }else if(currentLocation.y < _originCellY - minLineSpacing  && currentLocation.y > 0){
                 [self handlerForFirstQuadrantWithCurrentLocation:currentLocation];
@@ -1276,8 +747,8 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
                 _originCell.stateBtnSelected = YES;
                 [_selectedIndexPathesForAssets addObject:_originIndexPath];
                 _originCellY = _originCell.frame.origin.y;
-                _preMaxInd = _originIndexPath;
-                _preLocation = _originLocation;
+//                _preMaxInd = _originIndexPath;
+//                _preLocation = _originLocation;
             }else{
                 //选择过程结束，开始拖动复制
                 _doneSelection = YES;
@@ -1293,8 +764,8 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
             _originIndexPath = nil;
         }
         _originCellY = 0;
-        _preMaxInd = nil;
-        _preLocation = CGPointZero;
+//        _preMaxInd = nil;
+//        _preLocation = CGPointZero;
         //如果滑动的位置位于item cell的中间地带，则indexpath.row会返回0，但是此时未必选中row为0的item，所以要做个判断，
         return;
     }
@@ -1311,8 +782,6 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
             if (_originCell) {
                 if (!_rolling) {
                     CGPoint currentLocation = [pan locationInView:self.collectionView];
-                    
-//                    NSLog(@"arr:%@",arr);
                     [self currentLocationDidChange:currentLocation];
                 }
                 //pan手势滑到底部时，collectionview开始自动滚动
@@ -1408,8 +877,6 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
                                                                [_tableView setContentOffset:CGPointMake(_tableView.contentOffset.x, yOffset)];
                                                            }
                                                        }
-                                                       
-                                                       
                                                    }];
         [[NSRunLoop mainRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
     }
@@ -1421,15 +888,11 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
         CGPoint point = [_panForCollection translationInView:self.collectionView];
         if (point.y == 0 || fabs(point.x / point.y) > 5.0) {
             //左右方向
-//            NSLog(@"左右");
             return YES;
         }
-        
         if (point.x == 0 || fabs(point.y / point.x) > 5.0) {
             //上下方向
-//            NSLog(@"上下");
             CGPoint currentLocation = [_panForCollection locationInView:self.collectionView];
-            
             NSIndexPath *currentIndexPath = [_collectionView indexPathForItemAtPoint:currentLocation];
             PCAssetCell * cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:currentIndexPath];
             if (cell && [Tool cellIsSelected:cell inArrary:_selectedIndexPathesForAssets]) {
@@ -1481,14 +944,10 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
                 [indexPaths addObject:indexPath];
             }
         }
-        
         NSError *err = nil;
         NSInteger index = [_tableView indexPathForSelectedRow].row;
-        
         PCAlbumModel *model = _albums[index];
         [[PHPhotoLibrary sharedPhotoLibrary] performChangesAndWait:^{
-            
-           
             if (self.tableView.indexPathForSelectedRow.row == 0) {
                 //相机胶卷 相册
                  [PHAssetChangeRequest deleteAssets:assets];
@@ -1496,11 +955,7 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
                 PHAssetCollectionChangeRequest *request = [PHAssetCollectionChangeRequest changeRequestForAssetCollection:model.collection];
                 [request removeAssets:assets];
             }
-           
-        
         } error:&err];
-        
-        
         if (err) {
             NSLog(@"err:%@",[err localizedDescription]);
         }else{
@@ -1516,9 +971,7 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
             [_tableView reloadData];
             [_selectedIndexPathesForAssets removeAllObjects];
         }
-        
     }
-   
 }
 
 
@@ -1554,15 +1007,12 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
 }
 //取消
 - (void)cancelSelection{
-//    if (_doneSelection) {
         _doneSelection = NO;
         if (_selectedIndexPathesForAssets.count > 0) {
            
             for (NSIndexPath *index in _selectedIndexPathesForAssets) {
-//                for ( in arr) {
-                    PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
-                    cell.stateBtnSelected = NO;
-//                }
+                PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
+                cell.stateBtnSelected = NO;
             }
             
             for (NSInteger i = 0; i < _selectedAllForSectionArr.count; i++) {
@@ -1574,7 +1024,6 @@ NSIndexPath * preIndexPath = _selectedIndexPathesForAssets.lastObject;
             [_selectedIndexPathesForAssets removeAllObjects];
 
         }
-
 }
 
 #pragma 相册操作
