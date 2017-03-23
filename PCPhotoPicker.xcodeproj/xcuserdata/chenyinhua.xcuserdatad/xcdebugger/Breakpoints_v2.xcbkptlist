@@ -10,12 +10,12 @@
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "PCPhotoPicker/PCPhotoPickerHelper.m"
-            timestampString = "509858726.350326"
+            timestampString = "511941663.334776"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "172"
-            endingLineNumber = "172"
-            landmarkName = "-originImgWithAsset:"
+            startingLineNumber = "165"
+            endingLineNumber = "165"
+            landmarkName = "-thumbnailWithAsset:size:"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

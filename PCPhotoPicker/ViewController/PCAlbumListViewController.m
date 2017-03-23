@@ -24,10 +24,8 @@
 @property (assign, nonatomic) BOOL firstTimeMove;
 @property (strong, nonatomic) NSMutableArray * preIndexArr;//前一次的index数组
 @property (assign, nonatomic) CGPoint originLocation;//最开始时手势的location
-//@property (assign, nonatomic) CGPoint preLocation;
 @property (strong, nonatomic) NSMutableArray *selectedImgViewArr;//选中的图片列表
 @property (strong, nonatomic) UIPanGestureRecognizer *panForCollection;
-//@property (strong, nonatomic) NSIndexPath *originIndexPath;
 @property (strong, nonatomic) UIButton *deleteBtn;//删除按钮
 @property (strong, nonatomic) UIButton *selectAllBtn;//全选
 @property (strong, nonatomic) UIButton *cancelBtn;//取消全选
@@ -54,7 +52,7 @@
 @property (strong, nonatomic) NSMutableArray *selectedAllForSectionArr;//保存每个section的状态，是收起还是展开
 @property (strong, nonatomic) UIButton *sortBtn;//对tableivew重新排序的按钮
 @property (assign, nonatomic) BOOL tableDescending;//tableview是否降序
-//@property (strong, nonatomic) NSIndexPath *preMaxInd;//上一个最大的indexpath
+
 @end
 
 static  NSString *PCAlbumListCellIdentifier = @"PCAlbumListCellIdentifier";
@@ -65,6 +63,7 @@ const CGFloat scrollBarWidth = 30;
 const CGFloat collectionHeaderHeight = 30;
 const CGFloat minLineSpacing = 1;
 const CGFloat minInterItemSpacing = 1; //item之间的距离
+const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动时的速度
 
 #define  kXMNMargin  1
 #define  cellWidth  ([UIScreen mainScreen].bounds.size.width * 2/3 - scrollBarWidth) / numberPerLine - kXMNMargin
@@ -80,6 +79,8 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     _selectedAllForSectionArr = [[NSMutableArray alloc]init];
     [self setUpRightNavBtn];
     [self setUpTableView];
+    
+    [self setUpBorder];
     [self setUpCollectionView];
     [self setUpBottomView];
     [self setUpBottomVieForTV];
@@ -126,6 +127,32 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
     [self.view addSubview:_tableView];
 }
 
+- (void)setUpBottomVieForTV{
+    if (!_bottomViewForTV) {
+        
+        _bottomViewForTV = [[UIView alloc]initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height - _bottomView.frame.size.height , _tableView.frame.size.width - 1, _bottomView.frame.size.height)];
+        _bottomViewForTV.backgroundColor = [UIColor lightGrayColor];
+        [self.view addSubview:_bottomViewForTV];
+    }
+    
+    if (!_createNewAlbumBtn) {
+        _createNewAlbumBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+        _createNewAlbumBtn.frame = CGRectMake(10, 5, 40, 30);
+        [_createNewAlbumBtn setTitle:@"+" forState:UIControlStateNormal];
+        [_createNewAlbumBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+        [_createNewAlbumBtn addTarget:self action:@selector(createNewAlbum) forControlEvents:UIControlEventTouchUpInside];
+        [_bottomViewForTV addSubview:_createNewAlbumBtn];
+    }
+}
+
+- (void)setUpBorder{
+    UIView *borderLayer = [[UIView  alloc]initWithFrame:CGRectMake(_tableView.frame.origin.x + _tableView.frame.size.width - 1, 0, 1, self.view.frame.size.height)];
+    borderLayer.backgroundColor = [UIColor grayColor];
+    borderLayer.alpha = 0.8;
+    [self.view addSubview:borderLayer];
+}
+
+
 - (void)setUpCollectionView{
     UICollectionViewFlowLayout *layout = [[UICollectionViewFlowLayout alloc]init];
     //宽度为其他值行不行？
@@ -165,8 +192,8 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
 - (void)setUpBottomView{
     if (!_bottomView) {
         CGFloat height = 40;
-        _bottomView = [[UIView alloc]initWithFrame:CGRectMake(self.collectionView.frame.origin.x, [UIScreen mainScreen].bounds.size.height -height , self.collectionView.frame.size.width, height)];
-        _bottomView.backgroundColor = [UIColor whiteColor];
+        _bottomView = [[UIView alloc]initWithFrame:CGRectMake(self.collectionView.frame.origin.x, [UIScreen mainScreen].bounds.size.height -height , self.view.frame.size.width - _tableView.frame.size.width, height)];
+        _bottomView.backgroundColor = [UIColor lightGrayColor];
         [self.view addSubview:_bottomView];
         
  
@@ -176,7 +203,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         _deleteBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         _deleteBtn.frame = CGRectMake(_bottomView.frame.size.width - 50, 5, 40, 30);
         [_deleteBtn setTitle:@"删除" forState:UIControlStateNormal];
-        [_deleteBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [_deleteBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         [_deleteBtn addTarget:self action:@selector(delete ) forControlEvents:UIControlEventTouchUpInside];
         [_bottomView addSubview:_deleteBtn];
     }
@@ -185,7 +212,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         _selectAllBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         _selectAllBtn.frame = CGRectMake(10, 5, 40, 30);
         [_selectAllBtn setTitle:@"全选" forState:UIControlStateNormal];
-        [_selectAllBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [_selectAllBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         [_selectAllBtn addTarget:self action:@selector(selectAll) forControlEvents:UIControlEventTouchUpInside];
         [_bottomView addSubview:_selectAllBtn];
     }
@@ -194,29 +221,13 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
         _cancelBtn = [UIButton buttonWithType:UIButtonTypeCustom];
         _cancelBtn.frame = CGRectMake(60, 5, 40, 30);
         [_cancelBtn setTitle:@"取消" forState:UIControlStateNormal];
-        [_cancelBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        [_cancelBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
         [_cancelBtn addTarget:self action:@selector(cancelSelection) forControlEvents:UIControlEventTouchUpInside];
         [_bottomView addSubview:_cancelBtn];
     }
 }
 
-- (void)setUpBottomVieForTV{
-    if (!_bottomViewForTV) {
-        
-        _bottomViewForTV = [[UIView alloc]initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height - _bottomView.frame.size.height , _tableView.frame.size.width, _bottomView.frame.size.height)];
-        _bottomViewForTV.backgroundColor = [UIColor whiteColor];
-        [self.view addSubview:_bottomViewForTV];
-    }
-    
-    if (!_createNewAlbumBtn) {
-        _createNewAlbumBtn = [UIButton buttonWithType:UIButtonTypeCustom];
-        _createNewAlbumBtn.frame = CGRectMake(10, 5, 40, 30);
-        [_createNewAlbumBtn setTitle:@"+" forState:UIControlStateNormal];
-        [_createNewAlbumBtn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
-        [_createNewAlbumBtn addTarget:self action:@selector(createNewAlbum) forControlEvents:UIControlEventTouchUpInside];
-        [_bottomViewForTV addSubview:_createNewAlbumBtn];
-    }
-}
+
 
 
 - (void)initScrollBar{
@@ -747,8 +758,6 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                 _originCell.stateBtnSelected = YES;
                 [_selectedIndexPathesForAssets addObject:_originIndexPath];
                 _originCellY = _originCell.frame.origin.y;
-//                _preMaxInd = _originIndexPath;
-//                _preLocation = _originLocation;
             }else{
                 //选择过程结束，开始拖动复制
                 _doneSelection = YES;
@@ -764,8 +773,6 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
             _originIndexPath = nil;
         }
         _originCellY = 0;
-//        _preMaxInd = nil;
-//        _preLocation = CGPointZero;
         //如果滑动的位置位于item cell的中间地带，则indexpath.row会返回0，但是此时未必选中row为0的item，所以要做个判断，
         return;
     }
@@ -834,7 +841,7 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                                                       CGFloat yOffset = _collectionView.contentOffset.y;
                                                       
                                                       if (_collectionViewMoveUp ) {
-                                                          yOffset -= 4;
+                                                          yOffset -= SPEED_OF_AUTOROLL;
                                                           _rolling = YES;
                                                           if (_collectionView.contentOffset.y > 0) {
                                                               [_collectionView setContentOffset:CGPointMake(_collectionView.contentOffset.x, yOffset)];
@@ -843,16 +850,14 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                                                           }
 
                                                       }else{
-                                                          yOffset += 4;
+                                                          yOffset += SPEED_OF_AUTOROLL;
                                                           if (_collectionView.contentOffset.y + _collectionView.frame.size.height < _collectionView.contentSize.height) {
                                                               [_collectionView setContentOffset:CGPointMake(_collectionView.contentOffset.x, yOffset)];
                                                               _rolling = YES;
                                                               [Tool autoAddVisibleItemsForMoveDownWithArray:_selectedIndexPathesForAssets collectionView:_collectionView originIndexPath:_originIndexPath];
                                                               
-                                                          }
-                                                          
+                                                          }   
                                                       }
-                                                      
                                                   }];
         [[NSRunLoop mainRunLoop] addTimer:_timer forMode:NSRunLoopCommonModes];
     }
@@ -867,12 +872,12 @@ const CGFloat minInterItemSpacing = 1; //item之间的距离
                                                    block:^(NSTimer * _Nonnull timer) {
                                                        CGFloat yOffset = _tableView.contentOffset.y;
                                                        if (_tableViewMoveUp) {
-                                                           yOffset -= 5;
+                                                           yOffset -= SPEED_OF_AUTOROLL;
                                                            if (_tableView.contentOffset.y > -64) {
                                                                [_tableView setContentOffset:CGPointMake(_tableView.contentOffset.x, yOffset)];
                                                            }
                                                        }else{
-                                                           yOffset += 5;
+                                                           yOffset += SPEED_OF_AUTOROLL;
                                                            if (_tableView.contentOffset.y + _tableView.frame.size.height < _tableView.contentSize.height) {
                                                                [_tableView setContentOffset:CGPointMake(_tableView.contentOffset.x, yOffset)];
                                                            }

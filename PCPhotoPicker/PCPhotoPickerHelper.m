@@ -115,25 +115,18 @@
                 NSDictionary *dict = [result lastObject];
                 NSMutableArray *arr = dict[@"assets"];
                 [arr addObject:model];
-                
             }else{
                 //否则加入新数组
                 NSMutableArray *assetArr = [[NSMutableArray alloc]init];
                 [assetArr addObject:model];
                 NSDictionary *dict = @{@"date":date,@"assets":assetArr};
                 [result addObject:dict];
-                
             }
-            
-            
         }
-        
-       
-        
     }
     
 //    NSLog(@"arr:%@",result);
-    return result;
+    return [[result reverseObjectEnumerator] allObjects];
     
 }
 
