@@ -4,7 +4,7 @@
 不知道大家平时有没有遇到这种问题，就是想给朋友发一张照片的时候，非常的麻烦。不管你是在微信上，还是在qq上，或者直接在iphone的原生照片app里，选一张图片，然后发送（或者分享）。
 
 我们先来看看，这些app中的问题，拿微信举例好了：  
-![image](https://github.com/peterchen145/swallow/imgs/wechatexsample.png)
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/wechatexsample.png)
 
 
 
