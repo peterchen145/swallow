@@ -38,6 +38,7 @@ so far so good.
 雨燕copy了苹果的这个功能。（说copy就copy吧，其实一开始我也想到这样了，就像我们在电脑上，按住鼠标左键然后滚动滚轮，不过后来发现苹果实现了这个功能）。
 
 先看几张图片：
+
 ![image](https://github.com/peterchen145/swallow/raw/master/imgs/mutleselection1.png)
 
 ![image](https://github.com/peterchen145/swallow/raw/master/imgs/mutleselection2.png)
@@ -46,10 +47,12 @@ so far so good.
 
 
 也可以看操作需要操作演示视频
+
 http://v.youku.com/v_show/id_XMjYzNDA1NTMwOA==.html?spm=a2hzp.8244740.0.0&from=y1.7-1.2
 
 
 照片的删除功能，自不必说了
+
 ![image](https://github.com/peterchen145/swallow/raw/master/imgs/deleteImg.png)
 
 选择图片的操作基本就这些了。
