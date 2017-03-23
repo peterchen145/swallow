@@ -365,7 +365,7 @@ const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动�
     UILabel *label = [[UILabel alloc]initWithFrame:CGRectMake(0, 20, 40, 20)];
     label.text = [NSString stringWithFormat:@"%ld   %ld",indexPath.section,indexPath.row];
     label.font = [UIFont systemFontOfSize:10];
-    [cell.contentView addSubview:label];
+//    [cell.contentView addSubview:label];
     
 //    for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
 //        NSMutableArray *arr = _selectedIndexPathesForAssets[i];
