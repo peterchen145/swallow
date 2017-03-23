@@ -688,6 +688,7 @@ const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动�
         [_tableView selectRowAtIndexPath:indexPath animated:NO scrollPosition:UITableViewScrollPositionNone];
         model = _albums[indexPath.row];
         _assets = [[PCPhotoPickerHelper sharedPhotoPickerHelper] assetsFromAlbum:model.fetchResult];
+        _doneSelection = NO;
         [_collectionView reloadData];
         [_selectedIndexPathesForAssets removeAllObjects];
     }else{
@@ -939,15 +940,12 @@ const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动�
         NSMutableArray *assets = [[NSMutableArray alloc]init];
         NSMutableArray *indexPaths = [[NSMutableArray alloc]init];
         for (int i = 0; i < _selectedIndexPathesForAssets.count; i++) {
-            NSArray *arr = _selectedIndexPathesForAssets[i];
-            for (int j = 0; j < arr.count; j++) {
-                NSIndexPath *index = arr[j];
-                PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
-                PHAsset *asset = cell.asset.asset;
-                [assets addObject:asset];
-                NSIndexPath *indexPath = [_collectionView indexPathForCell:cell];
-                [indexPaths addObject:indexPath];
-            }
+            NSIndexPath *index = _selectedIndexPathesForAssets[i];
+            PCAssetCell *cell = (PCAssetCell *)[_collectionView cellForItemAtIndexPath:index];
+            PHAsset *asset = cell.asset.asset;
+            [assets addObject:asset];
+            NSIndexPath *indexPath = [_collectionView indexPathForCell:cell];
+            [indexPaths addObject:indexPath];
         }
         NSError *err = nil;
         NSInteger index = [_tableView indexPathForSelectedRow].row;
@@ -966,6 +964,7 @@ const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动�
         }else{
             NSLog(@"delete success");
             
+            NSIndexPath *selectedIndex = _tableView.indexPathForSelectedRow;
             NSInteger index = [_tableView indexPathForSelectedRow].row;
             _albums = [[PCPhotoPickerHelper sharedPhotoPickerHelper] getAlbums];
             PCAlbumModel *model = _albums[index];
@@ -974,6 +973,7 @@ const CGFloat SPEED_OF_AUTOROLL = 8.0;//tableview和collectionview自动滚动�
 
             [_collectionView reloadData];
             [_tableView reloadData];
+            [_tableView selectRowAtIndexPath:selectedIndex animated:NO scrollPosition:UITableViewScrollPositionNone];
             [_selectedIndexPathesForAssets removeAllObjects];
         }
     }
