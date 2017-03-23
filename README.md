@@ -1,6 +1,6 @@
 # 雨燕
 相册相片管理app
-操作地址：http://v.youku.com/v_show/id_XMjYzNDA1NTMwOA==.html?spm=a2hzp.8244740.0.0&from=y1.7-1.2
+
 不知道大家平时有没有遇到这种问题，就是想给朋友发一张照片的时候，非常的麻烦。不管你是在微信上，还是在qq上，或者直接在iphone的原生照片app里，选一张图片，然后发送（或者分享）。
 
 我们先来看看，这些app中的问题，拿微信举例好了：  
@@ -13,7 +13,7 @@
 那么怎么解决这个问题呢？
 
 在电脑上已经解决过这个问题了，就是滚动条。
-
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/scrollbar.png)
 
 有了滚动条，我们只需要按住滚动条，然后拖动，很容易的就可以拖到相册的中间，或者任何你想要的地方。为 了方便，我还在滚动条的顶部和底部各加一个按钮，点击顶部按钮就可以滚动到顶部，点击底部按钮就滚动到底部。
 
@@ -22,9 +22,9 @@
 比如我大概知道我想找的照片是在16年7月份的，怎么找呢？
 
 我的方法是把图片按照日期归组，同一天的为一组，然后标明日期，并且各组可以收缩展开，当你需要按时间查找时，可以点击收缩按钮，把图片收起来，然后拖动滚动条，到你想要的日期，再展开那一组照片进行选择，非常方便。
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/close.png)
 
-
-
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/opensomeofthem.png)
 
 
 so far so good.
@@ -37,27 +37,20 @@ so far so good.
 
 雨燕copy了苹果的这个功能。（说copy就copy吧，其实一开始我也想到这样了，就像我们在电脑上，按住鼠标左键然后滚动滚轮，不过后来发现苹果实现了这个功能）。
 
-这个操作需要操作演示视频
+先看几张图片：
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/mutleselection1.png)
+
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/mutleselection2.png)
+
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/mutleselection3.png)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-相片管理app:雨燕 操作演示
+也可以看操作需要操作演示视频
+http://v.youku.com/v_show/id_XMjYzNDA1NTMwOA==.html?spm=a2hzp.8244740.0.0&from=y1.7-1.2
 
 
 照片的删除功能，自不必说了
-
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/deleteImg.png)
 
 选择图片的操作基本就这些了。
 
@@ -67,11 +60,11 @@ so far so good.
 
 雨燕支持基本的相册管理操作：新增，编辑名称，删除。
 
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/addablum.png)
 
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/editablum.png)
 
-
-
-
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/deleteAlbum.png)
 
 
 既然我们可以方便的在相册之间切换了，那么我们就能方便的给相册添加照片。
@@ -81,7 +74,9 @@ so far so good.
 如果你想拖到的相册屏幕中显示不了，没事，拖动照片到左边底部区域，这时左边的相册的table就会向下滚动，如果到了你想要的相册，再移出底部就可以了（如果移动到顶部，就会向上滚）。
 
 
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/selectImg1.png)
 
+![image](https://github.com/peterchen145/swallow/raw/master/imgs/selectImg2.png)
 
 
 
